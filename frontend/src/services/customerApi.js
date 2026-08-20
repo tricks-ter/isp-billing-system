@@ -1,0 +1,20 @@
+import api from './api';
+
+export const customerApi = {
+  getAll: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/customers${queryParams ? `?${queryParams}` : ''}`);
+  },
+
+  getById: (id) => api.get(`/customers/${id}`),
+
+  create: (data) => api.post('/customers', data),
+
+  update: (id, data) => api.put(`/customers/${id}`, data),
+
+  delete: (id) => api.delete(`/customers/${id}`),
+
+  suspend: (id) => api.post(`/customers/${id}/suspend`),
+
+  restore: (id) => api.post(`/customers/${id}/restore`),
+};

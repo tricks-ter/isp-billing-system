@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  username  String     @unique
+  password  String
+  fullName  String
+  role      Role       @default(STAFF)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  auditLogs AuditLog[]
+  payments  Payment[]
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+model Customer {
+  id            Int       @id @default(autoincrement())
+  name          String
+  phone         String    @unique
+  address       String?
+  area          String?
+  pppoeUsername String    @unique
+  pppoePassword String
+  status        String    @default("ACTIVE")
+  packageId     Int
+  package       Package   @relation(fields: [packageId], references: [id])
+  routerId      Int?
+  router        Router?   @relation(fields: [routerId], references: [id])
+  invoices      Invoice[]
+  joinDate      DateTime  @default(now())
+  expireDate    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@index([pppoeUsername])
+}
+
+model Package {
+  id        Int        @id @default(autoincrement())
+  name      String
+  speed     String
+  price     Float
+  validity  Int
+  customers Customer[]
+}
+
+model Invoice {
+  id         Int       @id @default(autoincrement())
+  customerId Int
+  customer   Customer  @relation(fields: [customerId], references: [id])
+  month      String
+  amount     Float
+  discount   Float     @default(0)
+  vat        Float     @default(0)
+  total      Float
+  dueDate    DateTime
+  status     String    @default("UNPAID")
+  payments   Payment[]
+  createdAt  DateTime  @default(now())
+
+  @@unique([customerId, month])
+}
+
+model Payment {
+  id         Int      @id @default(autoincrement())
+  invoiceId  Int
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  amount     Float
+  method     String
+  receivedBy Int
+  receiver   User     @relation(fields: [receivedBy], references: [id])
+  notes      String?
+  date       DateTime @default(now())
+}
+
+model Router {
+  id        Int        @id @default(autoincrement())
+  name      String
+  ipAddress String
+  apiPort   Int        @default(8728)
+  username  String
+  password  String
+  isActive  Boolean    @default(true)
+  customers Customer[]
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+}
