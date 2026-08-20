@@ -26,7 +26,7 @@ app.use(helmet()); // Security headers
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL || 'https://yourdomain.com' // Replace with your actual frontend domain in production
+    ? process.env.FRONTEND_URL || 'https://isp-billing-frontend-0f1m.onrender.com/' // Replace with your actual frontend domain in production
     : 'http://localhost:5173', // Vite dev server
   credentials: true,
 }));
