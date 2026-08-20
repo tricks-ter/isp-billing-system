@@ -1,9 +1,10 @@
-// FILE: ./backend/src/index.js
+// backend/src/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit'); // NEW
 
 // Import all route modules
 const authRoutes = require('./routes/authRoutes');
@@ -12,16 +13,24 @@ const packageRoutes = require('./routes/packageRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const routerRoutes = require('./routes/routerRoutes');
-
-// Phase 6: New auxiliary routes
 const userRoutes = require('./routes/userRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
-const settingsRoutes = require('./routes/settingsRoutes'); // <-- ADDED
+const settingsRoutes = require('./routes/settingsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// --- Rate Limiting (NEW) ---
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later.' },
+});
+app.use(limiter);
 
 // --- Middleware ---
 app.use(helmet());
@@ -41,13 +50,11 @@ app.use('/api/packages', packageRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/routers', routerRoutes);
-
-// Phase 6: Register new auxiliary routes
 app.use('/api/users', userRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', settingsRoutes); // <-- ADDED
+app.use('/api/settings', settingsRoutes);
 
 // --- Health Check ---
 app.get('/api/health', (req, res) => {

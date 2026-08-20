@@ -1,3 +1,4 @@
+// frontend/src/services/notificationApi.js
 import api from './api';
 
 export const notificationApi = {
@@ -8,4 +9,5 @@ export const notificationApi = {
   },
   markAsRead: (id) => api.post(`/notifications/${id}/read`),
   markAllAsRead: () => api.post('/notifications/mark-all-read'),
+  sendReminders: () => api.post('/notifications/send-reminders'), // NEW
 };

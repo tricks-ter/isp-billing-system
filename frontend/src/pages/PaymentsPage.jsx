@@ -1,9 +1,12 @@
+// frontend/src/pages/PaymentsPage.jsx
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { paymentApi } from '../services/paymentApi';
-import { Receipt, Wallet, Smartphone, Building2, TrendingUp } from 'lucide-react';
+import { Receipt, Wallet, Smartphone, Building2, TrendingUp, Download } from 'lucide-react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
+import { exportCSV } from '../utils/export';
+import toast from 'react-hot-toast';
 
 export default function PaymentsPage() {
   const [methodFilter, setMethodFilter] = useState('');
@@ -32,8 +35,44 @@ export default function PaymentsPage() {
     return icons[method] || icons.CASH;
   };
 
+  const handleExportCSV = () => {
+    if (!data?.payments || data.payments.length === 0) {
+      toast.error('No payments to export');
+      return;
+    }
+    const columns = [
+      { key: 'customer', label: 'Customer' },
+      { key: 'amount', label: 'Amount (৳)' },
+      { key: 'method', label: 'Method' },
+      { key: 'receivedBy', label: 'Received By' },
+      { key: 'date', label: 'Date' },
+      { key: 'notes', label: 'Notes' },
+    ];
+    const dataToExport = data.payments.map(p => ({
+      customer: p.invoice?.customer?.name || 'N/A',
+      amount: p.amount,
+      method: p.method,
+      receivedBy: p.receiver?.fullName || 'N/A',
+      date: new Date(p.date).toLocaleString('en-GB'),
+      notes: p.notes || '',
+    }));
+    exportCSV(dataToExport, columns, `payments_${new Date().toISOString().slice(0, 10)}`);
+  };
+
   return (
     <div className="space-y-4 lg:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Payments</h1>
+          <p className="text-sm text-slate-500 mt-1">Payment history and collection records</p>
+        </div>
+        <Button variant="outline" onClick={handleExportCSV}>
+          <Download className="w-4 h-4" />
+          <span>Export CSV</span>
+        </Button>
+      </div>
+
       {/* Filters */}
       <div className="bg-white rounded-xl border border-slate-200 p-3 lg:p-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -176,4 +215,3 @@ export default function PaymentsPage() {
     </div>
   );
 }
-

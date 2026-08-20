@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Server, Info, Users, Activity, Layers, BarChart3,
   RefreshCw, Plus, Edit, Trash2, Loader2,
-  AlertCircle, Search, X, Power, PowerOff, LogOut
+  AlertCircle, Search, X, Power, PowerOff, LogOut,
+  AlertTriangle
 } from 'lucide-react';
 import { routerApi } from '../services/routerApi';
 import Button from '../components/Button';
@@ -67,13 +68,22 @@ export default function RouterDetailPage() {
     enabled: activeTab === 'info',
   });
 
+  // Get mock mode status to show warning
+  const { data: mockModeData } = useQuery({
+    queryKey: ['mikrotikMockMode'],
+    queryFn: () => settingsApi.getMikrotikMockMode().then(res => res.data.data),
+    staleTime: 60000,
+  });
+  const isMockMode = mockModeData?.mockMode ?? true;
+
   // Fetch PPPoE secrets (server-side paginated)
+  const pppoeQueryKey = ['pppoeSecretsPaginated', id, pppoePage, pppoeLimit, pppoeSearch, pppoeStatus];
   const {
     data: pppoeData,
     isLoading: pppoeLoading,
     refetch: refetchPppoe
   } = useQuery({
-    queryKey: ['pppoeSecretsPaginated', id, pppoePage, pppoeLimit, pppoeSearch, pppoeStatus],
+    queryKey: pppoeQueryKey,
     queryFn: () => routerApi.getPppoeSecretsPaginated(id, {
       page: pppoePage,
       limit: pppoeLimit,
@@ -84,12 +94,13 @@ export default function RouterDetailPage() {
   });
 
   // Fetch active sessions (server-side paginated)
+  const sessionQueryKey = ['activeSessionsPaginated', id, sessionPage, sessionLimit, sessionSearch];
   const {
     data: sessionData,
     isLoading: sessionsLoading,
     refetch: refetchSessions
   } = useQuery({
-    queryKey: ['activeSessionsPaginated', id, sessionPage, sessionLimit, sessionSearch],
+    queryKey: sessionQueryKey,
     queryFn: () => routerApi.getActiveSessionsPaginated(id, {
       page: sessionPage,
       limit: sessionLimit,
@@ -99,12 +110,13 @@ export default function RouterDetailPage() {
   });
 
   // Fetch profiles (server-side paginated)
+  const profileQueryKey = ['profilesPaginated', id, profilePage, profileLimit, profileSearch];
   const {
     data: profileData,
     isLoading: profilesLoading,
     refetch: refetchProfiles
   } = useQuery({
-    queryKey: ['profilesPaginated', id, profilePage, profileLimit, profileSearch],
+    queryKey: profileQueryKey,
     queryFn: () => routerApi.getProfilesPaginated(id, {
       page: profilePage,
       limit: profileLimit,
@@ -114,12 +126,13 @@ export default function RouterDetailPage() {
   });
 
   // Fetch queues (server-side paginated)
+  const queueQueryKey = ['queuesPaginated', id, queuePage, queueLimit, queueSearch];
   const {
     data: queueData,
     isLoading: queuesLoading,
     refetch: refetchQueues
   } = useQuery({
-    queryKey: ['queuesPaginated', id, queuePage, queueLimit, queueSearch],
+    queryKey: queueQueryKey,
     queryFn: () => routerApi.getSimpleQueuesPaginated(id, {
       page: queuePage,
       limit: queueLimit,
@@ -133,7 +146,7 @@ export default function RouterDetailPage() {
     mutationFn: (data) => routerApi.createPppoeSecret(id, data),
     onSuccess: () => {
       toast.success('PPPoE secret created');
-      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
       setIsPppoeFormOpen(false);
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to create'),
@@ -143,7 +156,7 @@ export default function RouterDetailPage() {
     mutationFn: ({ username, data }) => routerApi.updatePppoeSecret(id, username, data),
     onSuccess: () => {
       toast.success('PPPoE secret updated');
-      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
       setIsPppoeFormOpen(false);
       setEditingPppoe(null);
     },
@@ -154,25 +167,50 @@ export default function RouterDetailPage() {
     mutationFn: (username) => routerApi.deletePppoeSecret(id, username),
     onSuccess: () => {
       toast.success('PPPoE secret deleted');
-      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete'),
   });
 
+  // === OPTIMISTIC TOGGLE ===
   const togglePppoeMutation = useMutation({
     mutationFn: ({ username, disable }) => routerApi.togglePppoeSecret(id, username, disable),
+    onMutate: async ({ username, disable }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: pppoeQueryKey });
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData(pppoeQueryKey);
+      // Optimistically update the cache
+      if (previousData) {
+        const newData = {
+          ...previousData,
+          data: previousData.data.map(secret =>
+            secret.name === username ? { ...secret, disabled: disable } : secret
+          )
+        };
+        queryClient.setQueryData(pppoeQueryKey, newData);
+      }
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(pppoeQueryKey, context.previousData);
+      }
+      toast.error(err.response?.data?.message || 'Failed to toggle secret');
+    },
     onSuccess: (_, { username, disable }) => {
       toast.success(`PPPoE secret ${disable ? 'disabled' : 'enabled'}`);
-      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
+      // Refetch in background to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to toggle'),
   });
 
   const removeSessionMutation = useMutation({
     mutationFn: (username) => routerApi.removeActiveSession(id, username),
     onSuccess: (_, username) => {
       toast.success(`Session ${username} disconnected`);
-      queryClient.invalidateQueries(['activeSessionsPaginated', id]);
+      queryClient.invalidateQueries({ queryKey: ['activeSessionsPaginated', id] });
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to disconnect'),
   });
@@ -197,7 +235,8 @@ export default function RouterDetailPage() {
   };
 
   const handleTogglePppoe = (username, currentDisabled) => {
-    togglePppoeMutation.mutate({ username, disable: !currentDisabled });
+    const newState = !currentDisabled;
+    togglePppoeMutation.mutate({ username, disable: newState });
   };
 
   const handleDisconnectSession = (username) => {
@@ -238,7 +277,6 @@ export default function RouterDetailPage() {
   }
 
   // --- Tab renderers ---
-
   const renderInfoTab = () => {
     if (infoLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
     if (!info) return <div className="py-8 text-center text-slate-500">No info available</div>;
@@ -419,54 +457,82 @@ export default function RouterDetailPage() {
       { key: 'actions', label: 'Actions', className: 'text-right' },
     ];
 
-    const renderRow = (secret) => (
-      <>
-        <td className="px-4 py-3 text-sm font-mono text-slate-900">{secret.name}</td>
-        <td className="px-4 py-3 text-sm text-slate-600">{secret.profile}</td>
-        <td className="px-4 py-3">
-          {secret.disabled ? (
-            <Badge variant="danger">Disabled</Badge>
-          ) : (
-            <Badge variant="success">Enabled</Badge>
-          )}
-        </td>
-        <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{secret.comment || '-'}</td>
-        <td className="px-4 py-3 text-right">
-          <div className="flex items-center justify-end space-x-1">
-            <button
-              onClick={() => handleTogglePppoe(secret.name, secret.disabled)}
-              className={`p-1.5 rounded-lg ${secret.disabled ? 'text-green-600 hover:bg-green-50' : 'text-amber-600 hover:bg-amber-50'}`}
-              title={secret.disabled ? 'Enable' : 'Disable'}
-            >
-              {secret.disabled ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => handleEditPppoe(secret)}
-              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-              title="Edit"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => handleDeletePppoe(secret.name)}
-              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </td>
-      </>
-    );
+    const renderRow = (secret) => {
+      const isToggling = togglePppoeMutation.isPending && togglePppoeMutation.variables?.username === secret.name;
+      return (
+        <>
+          <td className="px-4 py-3 text-sm font-mono text-slate-900">{secret.name}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{secret.profile}</td>
+          <td className="px-4 py-3">
+            {secret.disabled ? (
+              <Badge variant="danger">Disabled</Badge>
+            ) : (
+              <Badge variant="success">Enabled</Badge>
+            )}
+          </td>
+          <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{secret.comment || '-'}</td>
+          <td className="px-4 py-3 text-right">
+            <div className="flex items-center justify-end space-x-1">
+              <button
+                onClick={() => handleTogglePppoe(secret.name, secret.disabled)}
+                disabled={isToggling}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  secret.disabled
+                    ? 'text-green-600 hover:bg-green-50'
+                    : 'text-amber-600 hover:bg-amber-50'
+                } ${isToggling ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={secret.disabled ? 'Enable' : 'Disable'}
+              >
+                {isToggling ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : secret.disabled ? (
+                  <Power className="w-4 h-4" />
+                ) : (
+                  <PowerOff className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={() => handleEditPppoe(secret)}
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                title="Edit"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDeletePppoe(secret.name)}
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                title="Delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </td>
+        </>
+      );
+    };
 
     return (
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-slate-500">{total} secrets</p>
-          <Button size="sm" onClick={() => { setEditingPppoe(null); setIsPppoeFormOpen(true); }}>
-            <Plus className="w-4 h-4" />
-            <span>Add Secret</span>
-          </Button>
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <div className="flex items-center space-x-3">
+            <p className="text-sm text-slate-500">{total} secrets</p>
+            {isMockMode && (
+              <Badge variant="warning" className="flex items-center space-x-1">
+                <AlertTriangle className="w-3 h-3" />
+                <span>Mock Mode</span>
+              </Badge>
+            )}
+          </div>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" onClick={refetchPppoe}>
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh</span>
+            </Button>
+            <Button size="sm" onClick={() => { setEditingPppoe(null); setIsPppoeFormOpen(true); }}>
+              <Plus className="w-4 h-4" />
+              <span>Add Secret</span>
+            </Button>
+          </div>
         </div>
         {renderPaginatedTable({
           data: secrets,
@@ -508,28 +574,38 @@ export default function RouterDetailPage() {
       { key: 'actions', label: 'Actions', className: 'text-right' },
     ];
 
-    const renderRow = (session) => (
-      <>
-        <td className="px-4 py-3 text-sm font-mono text-slate-900">{session.username}</td>
-        <td className="px-4 py-3 text-sm font-mono text-slate-600">{session.address}</td>
-        <td className="px-4 py-3 text-sm text-slate-600">{formatUptime(session.uptime)}</td>
-        <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesIn)}</td>
-        <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesOut)}</td>
-        <td className="px-4 py-3 text-right">
-          <button
-            onClick={() => handleDisconnectSession(session.username)}
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
-            title="Disconnect"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </td>
-      </>
-    );
+    const renderRow = (session) => {
+      const isDisconnecting = removeSessionMutation.isPending && removeSessionMutation.variables === session.username;
+      return (
+        <>
+          <td className="px-4 py-3 text-sm font-mono text-slate-900">{session.username}</td>
+          <td className="px-4 py-3 text-sm font-mono text-slate-600">{session.address}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{formatUptime(session.uptime)}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesIn)}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesOut)}</td>
+          <td className="px-4 py-3 text-right">
+            <button
+              onClick={() => handleDisconnectSession(session.username)}
+              disabled={isDisconnecting}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Disconnect"
+            >
+              {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+            </button>
+          </td>
+        </>
+      );
+    };
 
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-4">{total} active sessions</p>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-slate-500">{total} active sessions</p>
+          <Button variant="outline" size="sm" onClick={refetchSessions}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+        </div>
         {renderPaginatedTable({
           data: sessions,
           total,
@@ -575,7 +651,13 @@ export default function RouterDetailPage() {
 
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-4">{total} profiles</p>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-slate-500">{total} profiles</p>
+          <Button variant="outline" size="sm" onClick={refetchProfiles}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+        </div>
         {renderPaginatedTable({
           data: profiles,
           total,
@@ -627,7 +709,13 @@ export default function RouterDetailPage() {
 
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-4">{total} queues</p>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-slate-500">{total} queues</p>
+          <Button variant="outline" size="sm" onClick={refetchQueues}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+        </div>
         {renderPaginatedTable({
           data: queues,
           total,
@@ -673,9 +761,19 @@ export default function RouterDetailPage() {
         </div>
         <Button variant="outline" onClick={handleRefresh}>
           <RefreshCw className="w-4 h-4" />
-          <span>Refresh</span>
+          <span>Refresh All</span>
         </Button>
       </div>
+
+      {/* Mock Mode Warning Banner */}
+      {isMockMode && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center space-x-2 text-amber-800">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm">
+            <strong>Mock Mode Active:</strong> All MikroTik operations are simulated. No real router changes are applied.
+          </p>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-slate-200">
