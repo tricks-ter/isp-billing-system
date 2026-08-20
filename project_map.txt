@@ -25,6 +25,7 @@
 │   │   │   ├── packageController.js
 │   │   │   ├── paymentController.js
 │   │   │   ├── routerController.js
+│   │   │   ├── settingsController.js
 │   │   │   └── userController.js
 │   │   ├── middleware
 │   │   │   ├── authMiddleware.js
@@ -39,6 +40,7 @@
 │   │   │   ├── packageRoutes.js
 │   │   │   ├── paymentRoutes.js
 │   │   │   ├── routerRoutes.js
+│   │   │   ├── settingsRoutes.js
 │   │   │   └── userRoutes.js
 │   │   ├── services
 │   │   │   ├── auditService.js
@@ -51,6 +53,7 @@
 │   │   │   ├── packageService.js
 │   │   │   ├── paymentService.js
 │   │   │   ├── routerService.js
+│   │   │   ├── settingsService.js
 │   │   │   ├── smsService.js
 │   │   │   └── userService.js
 │   │   ├── utils
@@ -118,6 +121,7 @@
 │   │   │   ├── packageApi.js
 │   │   │   ├── paymentApi.js
 │   │   │   ├── routerApi.js
+│   │   │   ├── settingsApi.js
 │   │   │   └── userApi.js
 │   │   ├── store
 │   │   │   └── authStore.js
@@ -139,7 +143,7 @@
 ├── project_map.txt
 └── README.md
 
-26 directories, 111 files
+26 directories, 115 files
 
 =========================================
 2. COMPLETE FILE LIST (LOCATIONS)
@@ -162,6 +166,7 @@
 ./backend/src/controllers/packageController.js
 ./backend/src/controllers/paymentController.js
 ./backend/src/controllers/routerController.js
+./backend/src/controllers/settingsController.js
 ./backend/src/controllers/userController.js
 ./backend/src/index.js
 ./backend/src/middleware/authMiddleware.js
@@ -175,6 +180,7 @@
 ./backend/src/routes/packageRoutes.js
 ./backend/src/routes/paymentRoutes.js
 ./backend/src/routes/routerRoutes.js
+./backend/src/routes/settingsRoutes.js
 ./backend/src/routes/userRoutes.js
 ./backend/src/services/auditService.js
 ./backend/src/services/authService.js
@@ -186,6 +192,7 @@
 ./backend/src/services/packageService.js
 ./backend/src/services/paymentService.js
 ./backend/src/services/routerService.js
+./backend/src/services/settingsService.js
 ./backend/src/services/smsService.js
 ./backend/src/services/userService.js
 ./docs/MASTER_ARCHITECTURE.md
@@ -248,6 +255,7 @@
 ./frontend/src/services/packageApi.js
 ./frontend/src/services/paymentApi.js
 ./frontend/src/services/routerApi.js
+./frontend/src/services/settingsApi.js
 ./frontend/src/services/userApi.js
 ./frontend/src/store/authStore.js
 ./frontend/tailwind.config.js
@@ -2807,6 +2815,7 @@ module.exports = new PaymentController();
 -------------------------------------------------------------------
 FILE: ./backend/src/controllers/routerController.js
 -------------------------------------------------------------------
+// FILE: ./backend/src/controllers/routerController.js
 const routerService = require('../services/routerService');
 
 class RouterController {
@@ -2858,7 +2867,7 @@ class RouterController {
   async testConnection(req, res) {
     try {
       const result = await routerService.testConnection(req.params.id);
-      return res.status(200).json({ success: result.success, data: result });
+      return res.status(200).json(result);
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -2898,9 +2907,152 @@ class RouterController {
       return res.status(400).json({ success: false, message: error.message });
     }
   }
+
+  // NEW CONTROLLER METHODS
+  async getRouterInfo(req, res) {
+    try {
+      const info = await routerService.getRouterInfo(req.params.id);
+      return res.status(200).json({ success: true, data: info });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getPppoeSecrets(req, res) {
+    try {
+      const secrets = await routerService.getPppoeSecrets(req.params.id);
+      return res.status(200).json({ success: true, data: secrets });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async createPppoeSecret(req, res) {
+    try {
+      const { username, password, profile, comment } = req.body;
+      if (!username || !password || !profile) {
+        return res.status(400).json({ success: false, message: 'username, password, and profile are required' });
+      }
+      const result = await routerService.createPppoeSecret(req.params.id, username, password, profile, comment || '');
+      return res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async updatePppoeSecret(req, res) {
+    try {
+      const { newPassword, newProfile } = req.body;
+      const result = await routerService.updatePppoeSecret(req.params.id, req.params.username, newPassword, newProfile);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async deletePppoeSecret(req, res) {
+    try {
+      const result = await routerService.deletePppoeSecret(req.params.id, req.params.username);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getActiveSessions(req, res) {
+    try {
+      const sessions = await routerService.getActiveSessions(req.params.id);
+      return res.status(200).json({ success: true, data: sessions });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getProfiles(req, res) {
+    try {
+      const profiles = await routerService.getProfiles(req.params.id);
+      return res.status(200).json({ success: true, data: profiles });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getSimpleQueues(req, res) {
+    try {
+      const queues = await routerService.getSimpleQueues(req.params.id);
+      return res.status(200).json({ success: true, data: queues });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
 }
 
 module.exports = new RouterController();
+-------------------------------------------------------------------
+FILE: ./backend/src/controllers/settingsController.js
+-------------------------------------------------------------------
+// FILE: ./backend/src/controllers/settingsController.js
+const settingsService = require('../services/settingsService');
+const mikrotikService = require('../services/mikrotikService');
+
+class SettingsController {
+  async getMikrotikMockMode(req, res) {
+    try {
+      const mockMode = await settingsService.getMikrotikMockMode();
+      mikrotikService.setMockMode(mockMode);
+      return res.status(200).json({ success: true, data: { mockMode } });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async setMikrotikMockMode(req, res) {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'enabled must be a boolean' });
+      }
+      const result = await settingsService.setMikrotikMockMode(enabled, req.user.id);
+      mikrotikService.setMockMode(enabled);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async getSmsMockMode(req, res) {
+    try {
+      const mockMode = await settingsService.getSmsMockMode();
+      return res.status(200).json({ success: true, data: { mockMode } });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async setSmsMockMode(req, res) {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'enabled must be a boolean' });
+      }
+      const result = await settingsService.setSmsMockMode(enabled, req.user.id);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async getAllSettings(req, res) {
+    try {
+      const settings = await settingsService.getAllSettings();
+      return res.status(200).json({ success: true, data: settings });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+}
+
+module.exports = new SettingsController();
 -------------------------------------------------------------------
 FILE: ./backend/src/controllers/userController.js
 -------------------------------------------------------------------
@@ -2962,6 +3114,7 @@ module.exports = new UserController();
 -------------------------------------------------------------------
 FILE: ./backend/src/index.js
 -------------------------------------------------------------------
+// FILE: ./backend/src/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -2981,20 +3134,19 @@ const userRoutes = require('./routes/userRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const settingsRoutes = require('./routes/settingsRoutes'); // <-- ADDED
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middleware ---
 app.use(helmet());
-
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? process.env.FRONTEND_URL || 'https://yourdomain.com'
     : 'http://localhost:5173',
   credentials: true,
 }));
-
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
@@ -3011,12 +3163,13 @@ app.use('/api/users', userRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/settings', settingsRoutes); // <-- ADDED
 
 // --- Health Check ---
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'ISP Billing API is running', 
+  res.json({
+    success: true,
+    message: 'ISP Billing API is running',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
@@ -3237,6 +3390,7 @@ module.exports = router;
 -------------------------------------------------------------------
 FILE: ./backend/src/routes/routerRoutes.js
 -------------------------------------------------------------------
+// FILE: ./backend/src/routes/routerRoutes.js
 const express = require('express');
 const router = express.Router();
 const routerController = require('../controllers/routerController');
@@ -3254,6 +3408,44 @@ router.delete('/:id', roleMiddleware('ADMIN'), routerController.delete);
 router.post('/:id/test', routerController.testConnection);
 router.post('/bulk/suspend', roleMiddleware('ADMIN', 'MANAGER'), routerController.bulkSuspend);
 router.post('/bulk/restore', roleMiddleware('ADMIN', 'MANAGER'), routerController.bulkRestore);
+
+// NEW ROUTES FOR FULL MIKROTIK MANAGEMENT
+router.get('/:id/info', routerController.getRouterInfo);
+router.get('/:id/pppoe-secrets', routerController.getPppoeSecrets);
+router.post('/:id/pppoe-secrets', roleMiddleware('ADMIN', 'MANAGER'), routerController.createPppoeSecret);
+router.put('/:id/pppoe-secrets/:username', roleMiddleware('ADMIN', 'MANAGER'), routerController.updatePppoeSecret);
+router.delete('/:id/pppoe-secrets/:username', roleMiddleware('ADMIN', 'MANAGER'), routerController.deletePppoeSecret);
+router.get('/:id/active-sessions', routerController.getActiveSessions);
+router.get('/:id/profiles', routerController.getProfiles);
+router.get('/:id/queues', routerController.getSimpleQueues);
+
+module.exports = router;
+-------------------------------------------------------------------
+FILE: ./backend/src/routes/settingsRoutes.js
+-------------------------------------------------------------------
+// FILE: ./backend/src/routes/settingsRoutes.js
+const express = require('express');
+const router = express.Router();
+const settingsController = require('../controllers/settingsController');
+const authMiddleware = require('../middleware/authMiddleware');
+const roleMiddleware = require('../middleware/roleMiddleware');
+
+router.use(authMiddleware);
+
+// Get MikroTik mock mode status
+router.get('/mikrotik-mock-mode', settingsController.getMikrotikMockMode);
+
+// Set MikroTik mock mode (ADMIN only)
+router.put('/mikrotik-mock-mode', roleMiddleware('ADMIN'), settingsController.setMikrotikMockMode);
+
+// Get SMS mock mode status
+router.get('/sms-mock-mode', settingsController.getSmsMockMode);
+
+// Set SMS mock mode (ADMIN only)
+router.put('/sms-mock-mode', roleMiddleware('ADMIN'), settingsController.setSmsMockMode);
+
+// Get all settings (ADMIN only)
+router.get('/', roleMiddleware('ADMIN'), settingsController.getAllSettings);
 
 module.exports = router;
 -------------------------------------------------------------------
@@ -4015,19 +4207,18 @@ module.exports = new InvoiceService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/mikrotikService.js
 -------------------------------------------------------------------
-const RouterOSAPI = require('routeros-api');
+// FILE: ./backend/src/services/mikrotikService.js
+const { RouterOSAPI } = require('routeros-api');
 const fs = require('fs').promises;
 const path = require('path');
 
 class MikroTikService {
   constructor() {
-    // Initialize from env, but can be changed at runtime
     this.mockMode = process.env.MIKROTIK_MOCK_MODE === 'true';
     this.logFile = path.join(__dirname, '../../logs/mikrotik-operations.log');
     fs.mkdir(path.dirname(this.logFile), { recursive: true }).catch(() => {});
   }
 
-  // --- Mock Mode Toggling ---
   setMockMode(isMock) {
     this.mockMode = isMock;
     console.log(`[MikroTik Service] Mock Mode set to: ${this.mockMode}`);
@@ -4038,7 +4229,6 @@ class MikroTikService {
     return this.mockMode;
   }
 
-  // --- Logging ---
   async log(operation, params, result) {
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ${operation} | Params: ${JSON.stringify(params)} | Result: ${JSON.stringify(result)}\n`;
@@ -4049,19 +4239,18 @@ class MikroTikService {
     }
   }
 
-  // --- Connection Helper ---
   async connectToRouter(router) {
     if (this.mockMode) return { mock: true, router };
-
+    
     try {
       const api = new RouterOSAPI({
         host: router.ipAddress,
         user: router.username,
         password: router.password,
         port: router.apiPort || 8728,
-        timeout: 5000,
+        timeout: 10000,
       });
-
+      
       await api.connect();
       return api;
     } catch (error) {
@@ -4071,14 +4260,17 @@ class MikroTikService {
 
   async disconnect(api) {
     if (!this.mockMode && api && api.close) {
-      try { api.close(); } catch (e) { /* ignore close errors */ }
+      try { 
+        api.close(); 
+      } catch (e) { 
+        console.error('Disconnect error:', e);
+      }
     }
   }
 
-  // --- CRUD Operations ---
-
-  async addPppoeSecret(router, username, password, profile) {
-    const params = { username, password, profile, router: router.name };
+  // --- PPPoE Secret Management ---
+  async addPppoeSecret(router, username, password, profile, comment = '') {
+    const params = { username, password, profile, router: router.name, comment };
     
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE secret created' };
@@ -4089,20 +4281,67 @@ class MikroTikService {
 
     try {
       const api = await this.connectToRouter(router);
+      
+      // Check if user already exists
+      const existing = await api.write('/ppp/secret/print', [`?name=${username}`]);
+      if (existing.length > 0) {
+        await this.disconnect(api);
+        throw new Error(`PPPoE secret ${username} already exists`);
+      }
+      
       await api.write('/ppp/secret/add', [
         `=name=${username}`,
         `=password=${password}`,
         '=service=pppoe',
         `=profile=${profile}`,
+        comment ? `=comment=${comment}` : '',
+        '=disabled=no',
       ]);
+      
       await this.disconnect(api);
       
-      const result = { success: true };
+      const result = { success: true, message: 'PPPoE secret created successfully' };
       await this.log('ADD_PPPOE_SECRET', params, result);
       return result;
     } catch (error) {
       await this.log('ADD_PPPOE_SECRET', params, { error: error.message });
       throw new Error(`Failed to add PPPoE secret: ${error.message}`);
+    }
+  }
+
+  async updatePppoeSecret(router, username, newPassword, newProfile) {
+    const params = { username, newPassword, newProfile, router: router.name };
+    
+    if (this.mockMode) {
+      const result = { success: true, message: 'Mock: PPPoE secret updated' };
+      await this.log('UPDATE_PPPOE_SECRET', params, result);
+      return result;
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
+      
+      if (secrets.length === 0) {
+        await this.disconnect(api);
+        throw new Error(`PPPoE secret not found: ${username}`);
+      }
+      
+      const id = secrets[0]['.id'];
+      const commands = [`.id=${id}`];
+      
+      if (newPassword) commands.push(`=password=${newPassword}`);
+      if (newProfile) commands.push(`=profile=${newProfile}`);
+      
+      await api.write('/ppp/secret/set', commands);
+      await this.disconnect(api);
+      
+      const result = { success: true, message: 'PPPoE secret updated successfully' };
+      await this.log('UPDATE_PPPOE_SECRET', params, result);
+      return result;
+    } catch (error) {
+      await this.log('UPDATE_PPPOE_SECRET', params, { error: error.message });
+      throw new Error(`Failed to update PPPoE secret: ${error.message}`);
     }
   }
 
@@ -4119,12 +4358,15 @@ class MikroTikService {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
       
-      if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
+      if (secrets.length === 0) {
+        await this.disconnect(api);
+        throw new Error(`PPPoE secret not found: ${username}`);
+      }
       
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=yes']);
       await this.disconnect(api);
-
-      const result = { success: true };
+      
+      const result = { success: true, message: 'PPPoE secret disabled successfully' };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
       return result;
     } catch (error) {
@@ -4146,12 +4388,15 @@ class MikroTikService {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
       
-      if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
+      if (secrets.length === 0) {
+        await this.disconnect(api);
+        throw new Error(`PPPoE secret not found: ${username}`);
+      }
       
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=no']);
       await this.disconnect(api);
-
-      const result = { success: true };
+      
+      const result = { success: true, message: 'PPPoE secret enabled successfully' };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
       return result;
     } catch (error) {
@@ -4173,12 +4418,15 @@ class MikroTikService {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
       
-      if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
+      if (secrets.length === 0) {
+        await this.disconnect(api);
+        throw new Error(`PPPoE secret not found: ${username}`);
+      }
       
       await api.write('/ppp/secret/remove', [`.id=${secrets[0]['.id']}`]);
       await this.disconnect(api);
-
-      const result = { success: true };
+      
+      const result = { success: true, message: 'PPPoE secret removed successfully' };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
       return result;
     } catch (error) {
@@ -4187,7 +4435,98 @@ class MikroTikService {
     }
   }
 
-  // --- Real World Features ---
+  async getPppoeSecrets(router) {
+    if (this.mockMode) {
+      return [
+        { name: 'user1', profile: 'default', disabled: false, comment: 'Mock user 1' },
+        { name: 'user2', profile: 'premium', disabled: true, comment: 'Mock user 2' },
+      ];
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      const secrets = await api.write('/ppp/secret/print');
+      await this.disconnect(api);
+      
+      return secrets.map(s => ({
+        id: s['.id'],
+        name: s.name,
+        profile: s.profile,
+        disabled: s.disabled === 'true' || s.disabled === true,
+        comment: s.comment || '',
+        service: s.service || 'pppoe',
+      }));
+    } catch (error) {
+      console.error(`Failed to get PPPoE secrets from ${router.name}:`, error.message);
+      throw new Error(`Failed to fetch PPPoE secrets: ${error.message}`);
+    }
+  }
+
+  // --- Active Sessions ---
+  async getActiveSessions(router) {
+    if (this.mockMode) {
+      return [
+        { name: 'user1', address: '10.0.0.101', uptime: '01:23:45', bytesIn: 1234567, bytesOut: 7654321 },
+      ];
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      const sessions = await api.write('/ppp/active/print');
+      await this.disconnect(api);
+      
+      return sessions.map(s => ({
+        id: s['.id'],
+        username: s.name,
+        address: s.address,
+        uptime: s.uptime,
+        bytesIn: parseInt(s['bytes-in']) || 0,
+        bytesOut: parseInt(s['bytes-out']) || 0,
+        service: s.service,
+        callerId: s['caller-id'] || '',
+      }));
+    } catch (error) {
+      console.error(`Failed to get active sessions from ${router.name}:`, error.message);
+      return [];
+    }
+  }
+
+  // --- Router Info ---
+  async getRouterInfo(router) {
+    if (this.mockMode) {
+      return {
+        identity: `${router.name} (Mock)`,
+        version: 'RouterOS 7.15',
+        uptime: '2 weeks, 3 days, 4 hours',
+        freeMemory: '125M',
+        totalMemory: '256M',
+        cpuLoad: '12%',
+      };
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      
+      const identity = await api.write('/system/identity/print');
+      const resource = await api.write('/system/resource/print');
+      const clock = await api.write('/system/clock/print');
+      
+      await this.disconnect(api);
+
+      return {
+        identity: identity[0]?.name || 'Unknown',
+        version: resource[0]?.version || 'Unknown',
+        uptime: resource[0]?.uptime || 'Unknown',
+        freeMemory: resource[0]?.['free-memory'] || 'Unknown',
+        totalMemory: resource[0]?.['total-memory'] || 'Unknown',
+        cpuLoad: resource[0]?.['cpu-load'] || 'Unknown',
+        boardName: resource[0]?.['board-name'] || 'Unknown',
+        currentTime: clock[0]?.date + ' ' + clock[0]?.time || 'Unknown',
+      };
+    } catch (error) {
+      throw new Error(`Failed to get router info: ${error.message}`);
+    }
+  }
 
   async testConnection(router) {
     if (this.mockMode) {
@@ -4195,30 +4534,22 @@ class MikroTikService {
         success: true,
         mock: true,
         message: 'Mock Mode Active',
-        data: { identity: `${router.name} (Mock)`, version: '7.15 (Mock)', uptime: 'N/A' }
+        data: { 
+          identity: `${router.name} (Mock)`, 
+          version: '7.15 (Mock)', 
+          uptime: 'N/A' 
+        }
       };
     }
 
     try {
-      const api = await this.connectToRouter(router);
+      const info = await this.getRouterInfo(router);
       
-      // Fetch Identity
-      const identity = await api.write('/system/identity/print');
-      // Fetch Resource (Version/Uptime)
-      const resource = await api.write('/system/resource/print');
-      
-      await this.disconnect(api);
-
       return {
         success: true,
         mock: false,
         message: 'Connection successful',
-        data: {
-          identity: identity[0]?.name || 'Unknown',
-          version: resource[0]?.version || 'Unknown',
-          uptime: resource[0]?.uptime || 'Unknown',
-          freeMemory: resource[0]?.['free-memory'] || 'Unknown',
-        }
+        data: info
       };
     } catch (error) {
       return {
@@ -4230,37 +4561,57 @@ class MikroTikService {
     }
   }
 
-  async getActiveSessions() {
+  // --- Simple Queue Management ---
+  async getSimpleQueues(router) {
     if (this.mockMode) {
-      return []; // Return empty or mock data if needed
+      return [
+        { name: 'queue1', target: '10.0.0.101/32', maxLimit: '10M/10M', comment: 'Mock queue' },
+      ];
     }
-
-    // Note: To get ALL active sessions, we need to query ALL routers.
-    // This method expects an array of routers to query.
-    // For simplicity in this service, we will query a specific router if passed, 
-    // or we can handle it in routerService.
-    return []; 
-  }
-
-  async getRouterActiveSessions(router) {
-    if (this.mockMode) return [];
 
     try {
       const api = await this.connectToRouter(router);
-      const sessions = await api.write('/ppp/active/print');
+      const queues = await api.write('/queue/simple/print');
       await this.disconnect(api);
       
-      // sessions is an array of objects: [{'.id': '...', 'name': 'user1', 'address': '10.0.0.1', 'uptime': '00:10:00', ...}]
-      return sessions.map(s => ({
-        id: s['.id'],
-        username: s.name,
-        address: s.address,
-        uptime: s.uptime,
-        routerName: router.name,
-        routerId: router.id
+      return queues.map(q => ({
+        id: q['.id'],
+        name: q.name,
+        target: q.target,
+        maxLimit: q['max-limit'] || '0/0',
+        comment: q.comment || '',
+        disabled: q.disabled === 'true' || q.disabled === true,
       }));
     } catch (error) {
-      console.error(`Failed to get sessions from ${router.name}:`, error.message);
+      console.error(`Failed to get queues from ${router.name}:`, error.message);
+      return [];
+    }
+  }
+
+  // --- Profile Management ---
+  async getProfiles(router) {
+    if (this.mockMode) {
+      return [
+        { name: 'default', localAddress: '10.0.0.1', remoteAddress: 'pool1', rateLimit: '10M/10M' },
+        { name: 'premium', localAddress: '10.0.0.1', remoteAddress: 'pool2', rateLimit: '50M/50M' },
+      ];
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      const profiles = await api.write('/ppp/profile/print');
+      await this.disconnect(api);
+      
+      return profiles.map(p => ({
+        id: p['.id'],
+        name: p.name,
+        localAddress: p['local-address'] || '',
+        remoteAddress: p['remote-address'] || '',
+        rateLimit: p['rate-limit'] || '0/0',
+        comment: p.comment || '',
+      }));
+    } catch (error) {
+      console.error(`Failed to get profiles from ${router.name}:`, error.message);
       return [];
     }
   }
@@ -4426,39 +4777,40 @@ module.exports = new PackageService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/paymentService.js
 -------------------------------------------------------------------
+// FILE: ./backend/src/services/paymentService.js
 const prisma = require('../config/db');
-const mikrotikService = require('./mikrotikService'); // <-- ADDED: Required for auto-restore
+const mikrotikService = require('./mikrotikService');
 
 class PaymentService {
   async recordPayment(data, userId) {
     const { invoiceId, amount, method, notes } = data;
 
-    // Validate invoice exists (Include router details for auto-restore)
+    // 1. Fetch invoice and customer details BEFORE transaction
     const invoice = await prisma.invoice.findUnique({
       where: { id: parseInt(invoiceId) },
-      include: { 
-        payments: true, 
-        customer: { include: { router: true } } // <-- ADDED: Need router details
+      include: {
+        payments: true,
+        customer: { include: { router: true } }
       },
     });
 
     if (!invoice) throw new Error('Invoice not found');
 
-    // Calculate current paid amount
     const currentPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
     const remainingDue = invoice.total - currentPaid;
 
     if (amount > remainingDue) {
       throw new Error(`Payment amount (${amount}) exceeds due amount (${remainingDue})`);
     }
-
     if (amount <= 0) {
       throw new Error('Payment amount must be greater than 0');
     }
 
-    // Use transaction to ensure atomicity
+    // Track if we need to restore the customer AFTER the transaction
+    let customerRestored = false;
+
+    // 2. DATABASE TRANSACTION (Strictly DB operations only)
     const result = await prisma.$transaction(async (tx) => {
-      // Record payment
       const payment = await tx.payment.create({
         data: {
           invoiceId: parseInt(invoiceId),
@@ -4469,7 +4821,6 @@ class PaymentService {
         },
       });
 
-      // Update invoice status
       const newPaidAmount = currentPaid + parseFloat(amount);
       let newStatus = 'PARTIAL';
       if (newPaidAmount >= invoice.total) {
@@ -4481,31 +4832,33 @@ class PaymentService {
         data: { status: newStatus },
       });
 
-      // FIX #4: If fully paid and customer was suspended, restore them AND enable MikroTik
+      // Update DB status, but DO NOT call MikroTik API here
       if (newStatus === 'PAID' && invoice.customer.status === 'SUSPENDED') {
         await tx.customer.update({
           where: { id: invoice.customer.id },
           data: { status: 'ACTIVE' },
         });
-
-        // Call MikroTik to enable PPPoE
-        if (invoice.customer.routerId && invoice.customer.router) {
-          try {
-            await mikrotikService.enablePppoeSecret(
-              invoice.customer.router,
-              invoice.customer.pppoeUsername
-            );
-          } catch (error) {
-            console.error('Failed to enable PPPoE on auto-restore:', error);
-            // We don't throw here to avoid rolling back the successful payment
-          }
-        }
+        customerRestored = true;
       }
 
       return payment;
     });
 
-    // Log the action
+    // 3. EXTERNAL API CALL (Executed ONLY after DB transaction successfully commits)
+    if (customerRestored && invoice.customer.routerId && invoice.customer.router) {
+      try {
+        await mikrotikService.enablePppoeSecret(
+          invoice.customer.router,
+          invoice.customer.pppoeUsername
+        );
+      } catch (error) {
+        console.error('Failed to enable PPPoE on auto-restore:', error);
+        // We don't throw here to avoid confusing the user, 
+        // the payment is saved, router just needs manual sync.
+      }
+    }
+
+    // 4. Audit Log
     await prisma.auditLog.create({
       data: {
         userId,
@@ -4526,7 +4879,6 @@ class PaymentService {
   async getAllPayments(page = 1, limit = 20, filters = {}) {
     const skip = (page - 1) * limit;
     const where = {};
-
     if (filters.method) where.method = filters.method;
     if (filters.receivedBy) where.receivedBy = parseInt(filters.receivedBy);
     if (filters.fromDate || filters.toDate) {
@@ -4541,16 +4893,8 @@ class PaymentService {
         skip,
         take: limit,
         include: {
-          invoice: {
-            include: {
-              customer: {
-                select: { id: true, name: true, phone: true },
-              },
-            },
-          },
-          receiver: {
-            select: { id: true, fullName: true },
-          },
+          invoice: { include: { customer: { select: { id: true, name: true, phone: true } } } },
+          receiver: { select: { id: true, fullName: true } },
         },
         orderBy: { date: 'desc' },
       }),
@@ -4559,12 +4903,7 @@ class PaymentService {
 
     return {
       payments,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -4575,18 +4914,9 @@ class PaymentService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const payments = await prisma.payment.findMany({
-      where: {
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
+      where: { date: { gte: startOfDay, lte: endOfDay } },
       include: {
-        invoice: {
-          include: {
-            customer: { select: { name: true, phone: true } },
-          },
-        },
+        invoice: { include: { customer: { select: { name: true, phone: true } } } },
         receiver: { select: { fullName: true } },
       },
       orderBy: { date: 'desc' },
@@ -4598,13 +4928,7 @@ class PaymentService {
       return acc;
     }, {});
 
-    return {
-      date,
-      totalAmount,
-      totalPayments: payments.length,
-      byMethod,
-      payments,
-    };
+    return { date, totalAmount, totalPayments: payments.length, byMethod, payments };
   }
 }
 
@@ -4612,6 +4936,7 @@ module.exports = new PaymentService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/routerService.js
 -------------------------------------------------------------------
+// FILE: ./backend/src/services/routerService.js
 const prisma = require('../config/db');
 const mikrotikService = require('./mikrotikService');
 
@@ -4733,51 +5058,10 @@ class RouterService {
 
     if (!router) throw new Error('Router not found');
 
-    try {
-      const connection = await mikrotikService.connect(router);
-      
-      // In mock mode, simulate a delay
-      if (mikrotikService.mockMode) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        mikrotikService.disconnect(connection);
-        return {
-          success: true,
-          message: 'Connection successful (Mock Mode)',
-          mock: true,
-          routerInfo: {
-            identity: `${router.name} (Mock)`,
-            version: '7.15 (Mock)',
-            uptime: '2 days, 14 hours',
-          },
-        };
-      }
-
-      // Real connection test
-      const api = connection;
-      const identity = await api.write('/system/identity/print');
-      const resource = await api.write('/system/resource/print');
-      
-      mikrotikService.disconnect(connection);
-
-      return {
-        success: true,
-        message: 'Connection successful',
-        routerInfo: {
-          identity: identity[0]?.name || 'Unknown',
-          version: resource[0]?.version || 'Unknown',
-          uptime: resource[0]?.uptime || 'Unknown',
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Connection failed: ${error.message}`,
-      };
-    }
+    return await mikrotikService.testConnection(router);
   }
 
   async getLiveStatus() {
-    // Get all customers with their router info
     const customers = await prisma.customer.findMany({
       include: {
         package: true,
@@ -4786,8 +5070,7 @@ class RouterService {
       orderBy: { name: 'asc' },
     });
 
-    // In mock mode, simulate online/offline status
-    if (mikrotikService.mockMode) {
+    if (mikrotikService.getMockMode()) {
       const customersWithStatus = customers.map(customer => ({
         ...customer,
         routerName: customer.router?.name || 'No Router',
@@ -4809,21 +5092,124 @@ class RouterService {
       };
     }
 
-    // Real implementation would query MikroTik for active PPPoE sessions
-    return {
-      total: customers.length,
-      online: 0,
-      offline: 0,
-      customers: customers.map(c => ({
+    // REAL IMPLEMENTATION
+    const routers = await prisma.router.findMany({ where: { isActive: true } });
+    const allActiveSessions = [];
+    
+    for (const router of routers) {
+      try {
+        const sessions = await mikrotikService.getActiveSessions(router);
+        allActiveSessions.push(...sessions);
+      } catch (error) {
+        console.error(`Failed to fetch sessions from ${router.name}:`, error.message);
+      }
+    }
+
+    const customersWithStatus = customers.map(c => {
+      const session = allActiveSessions.find(s => s.username === c.pppoeUsername);
+      return {
         ...c,
         routerName: c.router?.name || 'No Router',
         routerIp: c.router?.ipAddress || '-',
-        isOnline: false,
-        uptime: '-',
-        ipAddress: '-',
-      })),
-      message: 'Real live status requires MikroTik connection',
+        isOnline: !!session,
+        uptime: session?.uptime || '-',
+        ipAddress: session?.address || '-',
+        bytesIn: session?.bytesIn || 0,
+        bytesOut: session?.bytesOut || 0,
+      };
+    });
+
+    return {
+      total: customersWithStatus.length,
+      online: customersWithStatus.filter(c => c.isOnline).length,
+      offline: customersWithStatus.filter(c => !c.isOnline).length,
+      customers: customersWithStatus,
     };
+  }
+
+  // --- Router Info ---
+  async getRouterInfo(id) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getRouterInfo(router);
+  }
+
+  // --- PPPoE Management ---
+  async getPppoeSecrets(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getPppoeSecrets(router);
+  }
+
+  async createPppoeSecret(routerId, username, password, profile, comment) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.addPppoeSecret(router, username, password, profile, comment);
+  }
+
+  async updatePppoeSecret(routerId, username, newPassword, newProfile) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.updatePppoeSecret(router, username, newPassword, newProfile);
+  }
+
+  async deletePppoeSecret(routerId, username) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.removePppoeSecret(router, username);
+  }
+
+  // --- Active Sessions ---
+  async getActiveSessions(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getActiveSessions(router);
+  }
+
+  // --- Profiles ---
+  async getProfiles(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getProfiles(router);
+  }
+
+  // --- Simple Queues ---
+  async getSimpleQueues(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getSimpleQueues(router);
   }
 
   async bulkSuspend(customerIds, userId) {
@@ -4934,6 +5320,75 @@ class RouterService {
 }
 
 module.exports = new RouterService();
+-------------------------------------------------------------------
+FILE: ./backend/src/services/settingsService.js
+-------------------------------------------------------------------
+// FILE: ./backend/src/services/settingsService.js
+const prisma = require('../config/db');
+
+class SettingsService {
+  async getSetting(key) {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key },
+    });
+    return setting?.value || null;
+  }
+
+  async setSetting(key, value, userId) {
+    const setting = await prisma.systemSetting.upsert({
+      where: { key },
+      update: { value: String(value) },
+      create: { key, value: String(value) },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'UPDATE_SETTING',
+        details: JSON.stringify({ key, value }),
+      },
+    });
+
+    return setting;
+  }
+
+  async getMikrotikMockMode() {
+    const setting = await this.getSetting('MIKROTIK_MOCK_MODE');
+    if (setting === null) {
+      return process.env.MIKROTIK_MOCK_MODE === 'true';
+    }
+    return setting === 'true';
+  }
+
+  async setMikrotikMockMode(enabled, userId) {
+    await this.setSetting('MIKROTIK_MOCK_MODE', enabled ? 'true' : 'false', userId);
+    return { mockMode: enabled };
+  }
+
+  async getSmsMockMode() {
+    const setting = await this.getSetting('SMS_MOCK_MODE');
+    if (setting === null) {
+      return process.env.SMS_MOCK_MODE !== 'false';
+    }
+    return setting === 'true';
+  }
+
+  async setSmsMockMode(enabled, userId) {
+    await this.setSetting('SMS_MOCK_MODE', enabled ? 'true' : 'false', userId);
+    return { mockMode: enabled };
+  }
+
+  async getAllSettings() {
+    const settings = await prisma.systemSetting.findMany();
+    const result = {};
+    settings.forEach(s => {
+      result[s.key] = s.value;
+    });
+    return result;
+  }
+}
+
+module.exports = new SettingsService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/smsService.js
 -------------------------------------------------------------------
@@ -5527,6 +5982,7 @@ FILE: ./file_list.tmp
 ./backend/src/controllers/packageController.js
 ./backend/src/controllers/paymentController.js
 ./backend/src/controllers/routerController.js
+./backend/src/controllers/settingsController.js
 ./backend/src/controllers/userController.js
 ./backend/src/index.js
 ./backend/src/middleware/authMiddleware.js
@@ -5540,6 +5996,7 @@ FILE: ./file_list.tmp
 ./backend/src/routes/packageRoutes.js
 ./backend/src/routes/paymentRoutes.js
 ./backend/src/routes/routerRoutes.js
+./backend/src/routes/settingsRoutes.js
 ./backend/src/routes/userRoutes.js
 ./backend/src/services/auditService.js
 ./backend/src/services/authService.js
@@ -5551,6 +6008,7 @@ FILE: ./file_list.tmp
 ./backend/src/services/packageService.js
 ./backend/src/services/paymentService.js
 ./backend/src/services/routerService.js
+./backend/src/services/settingsService.js
 ./backend/src/services/smsService.js
 ./backend/src/services/userService.js
 ./docs/MASTER_ARCHITECTURE.md
@@ -5613,6 +6071,7 @@ FILE: ./file_list.tmp
 ./frontend/src/services/packageApi.js
 ./frontend/src/services/paymentApi.js
 ./frontend/src/services/routerApi.js
+./frontend/src/services/settingsApi.js
 ./frontend/src/services/userApi.js
 ./frontend/src/store/authStore.js
 ./frontend/tailwind.config.js
@@ -11047,6 +11506,7 @@ export default function Layout() {
 -------------------------------------------------------------------
 FILE: ./frontend/src/components/Login.jsx
 -------------------------------------------------------------------
+// FILE: ./frontend/src/components/Login.jsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11057,7 +11517,6 @@ import { authApi } from '../services/authApi';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
 
-// Zod validation schema
 const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -11083,8 +11542,6 @@ export default function Login() {
     try {
       const response = await authApi.login(data);
       const { token, user } = response.data.data;
-
-      // Save to Zustand store + localStorage
       login(user, token);
       toast.success(`Welcome back, ${user.fullName}!`);
       navigate('/dashboard');
@@ -11099,8 +11556,6 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-slate-100 to-indigo-100 p-4">
       <div className="w-full max-w-md bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8 space-y-6">
-        
-        {/* Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-2">
             <Wifi className="w-8 h-8" />
@@ -11109,9 +11564,7 @@ export default function Login() {
           <p className="text-sm text-slate-500">Sign in to manage your network</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          
           {/* Username */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Username</label>
@@ -11120,6 +11573,7 @@ export default function Login() {
               <input
                 {...register('username')}
                 type="text"
+                autoComplete="username"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="admin"
               />
@@ -11137,6 +11591,7 @@ export default function Login() {
               <input
                 {...register('password')}
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="••••••••"
               />
@@ -11144,6 +11599,7 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -13878,10 +14334,12 @@ export default function ReportsPage() {
 -------------------------------------------------------------------
 FILE: ./frontend/src/pages/RoutersPage.jsx
 -------------------------------------------------------------------
+// FILE: ./frontend/src/pages/RoutersPage.jsx
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { routerApi } from '../services/routerApi';
-import { Plus, Edit, Trash2, TestTube, Server, Users, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { settingsApi } from '../services/settingsApi';
+import { Plus, Edit, Trash2, TestTube, Server, Users, CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -13897,6 +14355,21 @@ export default function RoutersPage() {
   const { data: routers, isLoading } = useQuery({
     queryKey: ['routers'],
     queryFn: () => routerApi.getAll().then(res => res.data.data),
+  });
+
+  const { data: mockModeData, isLoading: mockModeLoading } = useQuery({
+    queryKey: ['mikrotikMockMode'],
+    queryFn: () => settingsApi.getMikrotikMockMode().then(res => res.data.data),
+  });
+
+  const toggleMockModeMutation = useMutation({
+    mutationFn: (enabled) => settingsApi.setMikrotikMockMode(enabled),
+    onSuccess: (res) => {
+      const newMode = res.data.data.mockMode;
+      queryClient.setQueryData(['mikrotikMockMode'], { mockMode: newMode });
+      toast.success(newMode ? 'Mock Mode enabled' : 'Mock Mode disabled - connecting to real routers');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to toggle mock mode'),
   });
 
   const deleteMutation = useMutation({
@@ -13937,6 +14410,21 @@ export default function RoutersPage() {
     }
   };
 
+  const handleToggleMockMode = () => {
+    const currentMode = mockModeData?.mockMode ?? true;
+    const newMode = !currentMode;
+    
+    if (!newMode) {
+      if (!window.confirm('Disable Mock Mode? This will connect to REAL MikroTik routers. Ensure your routers are configured correctly.')) {
+        return;
+      }
+    }
+    
+    toggleMockModeMutation.mutate(newMode);
+  };
+
+  const isMockMode = mockModeData?.mockMode ?? true;
+
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Header */}
@@ -13949,6 +14437,52 @@ export default function RoutersPage() {
           <Plus className="w-4 h-4" />
           <span>Add Router</span>
         </Button>
+      </div>
+
+      {/* Mock Mode Toggle */}
+      <div className={`rounded-xl border p-4 ${isMockMode ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            {isMockMode ? (
+              <AlertTriangle className="w-6 h-6 text-amber-600" />
+            ) : (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            )}
+            <div>
+              <h3 className={`font-semibold ${isMockMode ? 'text-amber-900' : 'text-green-900'}`}>
+                MikroTik {isMockMode ? 'Mock Mode' : 'Live Mode'}
+              </h3>
+              <p className={`text-sm ${isMockMode ? 'text-amber-700' : 'text-green-700'}`}>
+                {isMockMode 
+                  ? 'Simulating router operations without connecting to real hardware'
+                  : 'Connected to real MikroTik routers via RouterOS API'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleMockMode}
+            disabled={toggleMockModeMutation.isPending || mockModeLoading}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              isMockMode 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-amber-600 hover:bg-amber-700 text-white'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {toggleMockModeMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isMockMode ? (
+              <>
+                <ToggleRight className="w-5 h-5" />
+                <span>Enable Live Mode</span>
+              </>
+            ) : (
+              <>
+                <ToggleLeft className="w-5 h-5" />
+                <span>Enable Mock Mode</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Routers Grid */}
@@ -14535,6 +15069,19 @@ export const routerApi = {
   getLiveStatus: () => api.get('/routers/live-status'),
   bulkSuspend: (customerIds) => api.post('/routers/bulk/suspend', { customerIds }),
   bulkRestore: (customerIds) => api.post('/routers/bulk/restore', { customerIds }),
+};
+-------------------------------------------------------------------
+FILE: ./frontend/src/services/settingsApi.js
+-------------------------------------------------------------------
+// FILE: ./frontend/src/services/settingsApi.js
+import api from './api';
+
+export const settingsApi = {
+  getMikrotikMockMode: () => api.get('/settings/mikrotik-mock-mode'),
+  setMikrotikMockMode: (enabled) => api.put('/settings/mikrotik-mock-mode', { enabled }),
+  getSmsMockMode: () => api.get('/settings/sms-mock-mode'),
+  setSmsMockMode: (enabled) => api.put('/settings/sms-mock-mode', { enabled }),
+  getAll: () => api.get('/settings'),
 };
 -------------------------------------------------------------------
 FILE: ./frontend/src/services/userApi.js

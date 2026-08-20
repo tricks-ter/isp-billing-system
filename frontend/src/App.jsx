@@ -1,3 +1,4 @@
+// frontend/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -11,8 +12,8 @@ import BillingPage from './pages/BillingPage';
 import PaymentsPage from './pages/PaymentsPage';
 import ReportsPage from './pages/ReportsPage';
 import RoutersPage from './pages/RoutersPage';
+import RouterDetailPage from './pages/RouterDetailPage';  // NEW
 import LiveStatusPage from './pages/LiveStatusPage';
-// Phase 6 Imports
 import FinancePage from './pages/FinancePage';
 import UsersPage from './pages/UsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
@@ -49,6 +50,7 @@ function App() {
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/routers" element={<RoutersPage />} />
+              <Route path="/routers/:id" element={<RouterDetailPage />} /> {/* NEW */}
               <Route path="/live-status" element={<LiveStatusPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/reports" element={<ReportsPage />} />

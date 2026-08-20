@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// frontend/src/pages/LiveStatusPage.jsx
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { routerApi } from '../services/routerApi';
 import { Zap, Wifi, WifiOff, RefreshCw, CheckSquare, Square, Pause, Play } from 'lucide-react';
@@ -9,13 +10,45 @@ import toast from 'react-hot-toast';
 export default function LiveStatusPage() {
   const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [search, setSearch] = useState('');
+  const [routerFilter, setRouterFilter] = useState('all'); // NEW
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['liveStatus'],
     queryFn: () => routerApi.getLiveStatus().then(res => res.data.data),
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 30000,
   });
+
+  // Compute router summary
+  const routersSummary = useMemo(() => {
+    if (!data?.customers) return [];
+    const map = {};
+    data.customers.forEach(c => {
+      const routerName = c.routerName || 'No Router';
+      if (!map[routerName]) {
+        map[routerName] = { total: 0, online: 0, offline: 0 };
+      }
+      map[routerName].total++;
+      if (c.isOnline) map[routerName].online++;
+      else map[routerName].offline++;
+    });
+    return Object.entries(map).map(([name, stats]) => ({ name, ...stats }));
+  }, [data]);
+
+  // Filter customers by router
+  const filteredCustomers = useMemo(() => {
+    if (!data?.customers) return [];
+    if (routerFilter === 'all') return data.customers;
+    return data.customers.filter(c => (c.routerName || 'No Router') === routerFilter);
+  }, [data, routerFilter]);
+
+  // Search filter
+  const searchedCustomers = useMemo(() => {
+    return filteredCustomers.filter(c =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.pppoeUsername.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [filteredCustomers, search]);
 
   const bulkSuspendMutation = useMutation({
     mutationFn: (ids) => routerApi.bulkSuspend(ids),
@@ -46,17 +79,12 @@ export default function LiveStatusPage() {
   };
 
   const selectAll = () => {
-    if (selectedCustomers.length === filteredCustomers?.length) {
+    if (selectedCustomers.length === searchedCustomers?.length) {
       setSelectedCustomers([]);
     } else {
-      setSelectedCustomers(filteredCustomers?.map(c => c.id) || []);
+      setSelectedCustomers(searchedCustomers?.map(c => c.id) || []);
     }
   };
-
-  const filteredCustomers = data?.customers?.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.pppoeUsername.toLowerCase().includes(search.toLowerCase())
-  ) || [];
 
   const handleBulkSuspend = () => {
     if (selectedCustomers.length === 0) {
@@ -110,6 +138,22 @@ export default function LiveStatusPage() {
         </div>
       )}
 
+      {/* Router Summary Cards */}
+      {routersSummary.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {routersSummary.map((router) => (
+            <div key={router.name} className="bg-white rounded-xl border border-slate-200 p-4">
+              <h4 className="font-medium text-slate-900 truncate">{router.name}</h4>
+              <div className="flex items-center justify-between mt-2 text-sm">
+                <span className="text-slate-500">Total: <strong>{router.total}</strong></span>
+                <span className="text-green-600">Online: {router.online}</span>
+                <span className="text-red-600">Offline: {router.offline}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Controls */}
       <div className="bg-white rounded-xl border border-slate-200 p-3 lg:p-4">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -120,6 +164,18 @@ export default function LiveStatusPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
+          <div className="flex-1 sm:max-w-xs">
+            <select
+              value={routerFilter}
+              onChange={(e) => setRouterFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="all">All Routers</option>
+              {routersSummary.map(r => (
+                <option key={r.name} value={r.name}>{r.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex gap-2">
             <Button
               variant="danger"
@@ -151,7 +207,7 @@ export default function LiveStatusPage() {
               <tr>
                 <th className="px-6 py-3 text-left">
                   <button onClick={selectAll} className="text-slate-400 hover:text-slate-600">
-                    {selectedCustomers.length === filteredCustomers?.length && filteredCustomers.length > 0
+                    {selectedCustomers.length === searchedCustomers?.length && searchedCustomers.length > 0
                       ? <CheckSquare className="w-5 h-5" />
                       : <Square className="w-5 h-5" />
                     }
@@ -168,10 +224,10 @@ export default function LiveStatusPage() {
             <tbody className="divide-y divide-slate-200">
               {isLoading ? (
                 <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
-              ) : filteredCustomers.length === 0 ? (
+              ) : searchedCustomers.length === 0 ? (
                 <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">No customers found</td></tr>
               ) : (
-                filteredCustomers.map((customer) => (
+                searchedCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4">
                       <button onClick={() => toggleSelect(customer.id)} className="text-slate-400 hover:text-slate-600">

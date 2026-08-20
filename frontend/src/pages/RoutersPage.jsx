@@ -1,9 +1,14 @@
-// FILE: ./frontend/src/pages/RoutersPage.jsx
+// frontend/src/pages/RoutersPage.jsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { routerApi } from '../services/routerApi';
 import { settingsApi } from '../services/settingsApi';
-import { Plus, Edit, Trash2, TestTube, Server, Users, CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
+import {
+  Plus, Edit, Trash2, TestTube, Server, Users,
+  CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight,
+  AlertTriangle, Eye
+} from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -11,6 +16,7 @@ import RouterForm from '../components/RouterForm';
 import toast from 'react-hot-toast';
 
 export default function RoutersPage() {
+  const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRouter, setEditingRouter] = useState(null);
   const [testingId, setTestingId] = useState(null);
@@ -77,13 +83,11 @@ export default function RoutersPage() {
   const handleToggleMockMode = () => {
     const currentMode = mockModeData?.mockMode ?? true;
     const newMode = !currentMode;
-    
     if (!newMode) {
       if (!window.confirm('Disable Mock Mode? This will connect to REAL MikroTik routers. Ensure your routers are configured correctly.')) {
         return;
       }
     }
-    
     toggleMockModeMutation.mutate(newMode);
   };
 
@@ -117,7 +121,7 @@ export default function RoutersPage() {
                 MikroTik {isMockMode ? 'Mock Mode' : 'Live Mode'}
               </h3>
               <p className={`text-sm ${isMockMode ? 'text-amber-700' : 'text-green-700'}`}>
-                {isMockMode 
+                {isMockMode
                   ? 'Simulating router operations without connecting to real hardware'
                   : 'Connected to real MikroTik routers via RouterOS API'}
               </p>
@@ -127,8 +131,8 @@ export default function RoutersPage() {
             onClick={handleToggleMockMode}
             disabled={toggleMockModeMutation.isPending || mockModeLoading}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-              isMockMode 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
+              isMockMode
+                ? 'bg-green-600 hover:bg-green-700 text-white'
                 : 'bg-amber-600 hover:bg-amber-700 text-white'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
@@ -194,16 +198,23 @@ export default function RoutersPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => navigate(`/routers/${router.id}`)}
+                  className="flex-1"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Details</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleTest(router.id)}
                   disabled={testingId === router.id}
-                  className="flex-1"
                 >
                   {testingId === router.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <TestTube className="w-4 h-4" />
                   )}
-                  <span>Test</span>
                 </Button>
                 <Button
                   variant="outline"

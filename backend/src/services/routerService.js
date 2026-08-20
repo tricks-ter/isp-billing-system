@@ -120,50 +120,10 @@ class RouterService {
 
     if (!router) throw new Error('Router not found');
 
-    try {
-      // BUG FIX: Changed from mikrotikService.connect(router) to connectToRouter(router)
-      const api = await mikrotikService.connectToRouter(router);
-      
-      // In mock mode, connectToRouter returns { mock: true, router }
-      if (api.mock) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-        return {
-          success: true,
-          message: 'Connection successful (Mock Mode)',
-          mock: true,
-          routerInfo: {
-            identity: `${router.name} (Mock)`,
-            version: '7.15 (Mock)',
-            uptime: '2 days, 14 hours',
-          },
-        };
-      }
-
-      // Real connection test
-      const identity = await api.write('/system/identity/print');
-      const resource = await api.write('/system/resource/print');
-      
-      mikrotikService.disconnect(api);
-
-      return {
-        success: true,
-        message: 'Connection successful',
-        routerInfo: {
-          identity: identity[0]?.name || 'Unknown',
-          version: resource[0]?.version || 'Unknown',
-          uptime: resource[0]?.uptime || 'Unknown',
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Connection failed: ${error.message}`,
-      };
-    }
+    return await mikrotikService.testConnection(router);
   }
 
   async getLiveStatus() {
-    // Get all customers with their router info
     const customers = await prisma.customer.findMany({
       include: {
         package: true,
@@ -172,7 +132,6 @@ class RouterService {
       orderBy: { name: 'asc' },
     });
 
-    // In mock mode, simulate online/offline status
     if (mikrotikService.getMockMode()) {
       const customersWithStatus = customers.map(customer => ({
         ...customer,
@@ -195,22 +154,21 @@ class RouterService {
       };
     }
 
-    // BUG FIX: REAL IMPLEMENTATION - Actually query MikroTik for active PPPoE sessions
+    // REAL IMPLEMENTATION
     const routers = await prisma.router.findMany({ where: { isActive: true } });
-    const activeSessions = [];
+    const allActiveSessions = [];
     
     for (const router of routers) {
       try {
-        const sessions = await mikrotikService.getRouterActiveSessions(router);
-        activeSessions.push(...sessions);
+        const sessions = await mikrotikService.getActiveSessions(router);
+        allActiveSessions.push(...sessions);
       } catch (error) {
-        console.error(`[LiveStatus] Failed to fetch sessions from ${router.name}:`, error.message);
+        console.error(`Failed to fetch sessions from ${router.name}:`, error.message);
       }
     }
 
-    // Map customers with their real online status based on PPPoE username
     const customersWithStatus = customers.map(c => {
-      const session = activeSessions.find(s => s.username === c.pppoeUsername);
+      const session = allActiveSessions.find(s => s.username === c.pppoeUsername);
       return {
         ...c,
         routerName: c.router?.name || 'No Router',
@@ -218,6 +176,8 @@ class RouterService {
         isOnline: !!session,
         uptime: session?.uptime || '-',
         ipAddress: session?.address || '-',
+        bytesIn: session?.bytesIn || 0,
+        bytesOut: session?.bytesOut || 0,
       };
     });
 
@@ -227,6 +187,91 @@ class RouterService {
       offline: customersWithStatus.filter(c => !c.isOnline).length,
       customers: customersWithStatus,
     };
+  }
+
+  // --- Router Info ---
+  async getRouterInfo(id) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getRouterInfo(router);
+  }
+
+  // --- PPPoE Management ---
+  async getPppoeSecrets(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getPppoeSecrets(router);
+  }
+
+  async createPppoeSecret(routerId, username, password, profile, comment) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.addPppoeSecret(router, username, password, profile, comment);
+  }
+
+  async updatePppoeSecret(routerId, username, newPassword, newProfile) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.updatePppoeSecret(router, username, newPassword, newProfile);
+  }
+
+  async deletePppoeSecret(routerId, username) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.removePppoeSecret(router, username);
+  }
+
+  // --- Active Sessions ---
+  async getActiveSessions(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getActiveSessions(router);
+  }
+
+  // --- Profiles ---
+  async getProfiles(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getProfiles(router);
+  }
+
+  // --- Simple Queues ---
+  async getSimpleQueues(routerId) {
+    const router = await prisma.router.findUnique({
+      where: { id: parseInt(routerId) },
+    });
+
+    if (!router) throw new Error('Router not found');
+
+    return await mikrotikService.getSimpleQueues(router);
   }
 
   async bulkSuspend(customerIds, userId) {

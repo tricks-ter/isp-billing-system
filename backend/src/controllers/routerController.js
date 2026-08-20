@@ -1,3 +1,4 @@
+// FILE: ./backend/src/controllers/routerController.js
 const routerService = require('../services/routerService');
 
 class RouterController {
@@ -49,7 +50,7 @@ class RouterController {
   async testConnection(req, res) {
     try {
       const result = await routerService.testConnection(req.params.id);
-      return res.status(200).json({ success: result.success, data: result });
+      return res.status(200).json(result);
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -85,6 +86,84 @@ class RouterController {
       }
       const results = await routerService.bulkRestore(customerIds, req.user.id);
       return res.status(200).json({ success: true, data: results });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // NEW CONTROLLER METHODS
+  async getRouterInfo(req, res) {
+    try {
+      const info = await routerService.getRouterInfo(req.params.id);
+      return res.status(200).json({ success: true, data: info });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getPppoeSecrets(req, res) {
+    try {
+      const secrets = await routerService.getPppoeSecrets(req.params.id);
+      return res.status(200).json({ success: true, data: secrets });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async createPppoeSecret(req, res) {
+    try {
+      const { username, password, profile, comment } = req.body;
+      if (!username || !password || !profile) {
+        return res.status(400).json({ success: false, message: 'username, password, and profile are required' });
+      }
+      const result = await routerService.createPppoeSecret(req.params.id, username, password, profile, comment || '');
+      return res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async updatePppoeSecret(req, res) {
+    try {
+      const { newPassword, newProfile } = req.body;
+      const result = await routerService.updatePppoeSecret(req.params.id, req.params.username, newPassword, newProfile);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async deletePppoeSecret(req, res) {
+    try {
+      const result = await routerService.deletePppoeSecret(req.params.id, req.params.username);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getActiveSessions(req, res) {
+    try {
+      const sessions = await routerService.getActiveSessions(req.params.id);
+      return res.status(200).json({ success: true, data: sessions });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getProfiles(req, res) {
+    try {
+      const profiles = await routerService.getProfiles(req.params.id);
+      return res.status(200).json({ success: true, data: profiles });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async getSimpleQueues(req, res) {
+    try {
+      const queues = await routerService.getSimpleQueues(req.params.id);
+      return res.status(200).json({ success: true, data: queues });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
