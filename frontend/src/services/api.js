@@ -5,7 +5,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor: Attach JWT token to every outgoing request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('isp_token');
   if (token) {
@@ -14,14 +13,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor: Handle 401 (token expired) globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('isp_token');
-      localStorage.removeItem('isp_user');
-      window.location.href = '/login';
+      if (!window.location.pathname.includes('/login')) {
+        localStorage.removeItem('isp_token');
+        localStorage.removeItem('isp_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

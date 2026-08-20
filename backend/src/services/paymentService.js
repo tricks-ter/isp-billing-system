@@ -1,13 +1,17 @@
 const prisma = require('../config/db');
+const mikrotikService = require('./mikrotikService'); // <-- ADDED: Required for auto-restore
 
 class PaymentService {
   async recordPayment(data, userId) {
     const { invoiceId, amount, method, notes } = data;
 
-    // Validate invoice exists
+    // Validate invoice exists (Include router details for auto-restore)
     const invoice = await prisma.invoice.findUnique({
       where: { id: parseInt(invoiceId) },
-      include: { payments: true, customer: true },
+      include: { 
+        payments: true, 
+        customer: { include: { router: true } } // <-- ADDED: Need router details
+      },
     });
 
     if (!invoice) throw new Error('Invoice not found');
@@ -49,12 +53,25 @@ class PaymentService {
         data: { status: newStatus },
       });
 
-      // If fully paid and customer was suspended, restore them
+      // FIX #4: If fully paid and customer was suspended, restore them AND enable MikroTik
       if (newStatus === 'PAID' && invoice.customer.status === 'SUSPENDED') {
         await tx.customer.update({
           where: { id: invoice.customer.id },
           data: { status: 'ACTIVE' },
         });
+
+        // Call MikroTik to enable PPPoE
+        if (invoice.customer.routerId && invoice.customer.router) {
+          try {
+            await mikrotikService.enablePppoeSecret(
+              invoice.customer.router,
+              invoice.customer.pppoeUsername
+            );
+          } catch (error) {
+            console.error('Failed to enable PPPoE on auto-restore:', error);
+            // We don't throw here to avoid rolling back the successful payment
+          }
+        }
       }
 
       return payment;

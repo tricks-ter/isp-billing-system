@@ -12,19 +12,30 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const routerRoutes = require('./routes/routerRoutes');
 
+// Phase 6: New auxiliary routes
+const userRoutes = require('./routes/userRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const financeRoutes = require('./routes/financeRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middleware ---
 app.use(helmet()); // Security headers
+
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? 'https://yourdomain.com' // Replace with your actual frontend domain in production
+    ? process.env.FRONTEND_URL || 'https://yourdomain.com' // Replace with your actual frontend domain in production
     : 'http://localhost:5173', // Vite dev server
   credentials: true,
 }));
-app.use(express.json()); // Parse JSON bodies
-app.use(morgan('dev')); // HTTP request logging
+
+// Parse JSON bodies (increased limit to 10mb to handle larger payloads safely)
+app.use(express.json({ limit: '10mb' }));
+
+// HTTP request logging
+app.use(morgan('dev'));
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);
@@ -34,12 +45,19 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/routers', routerRoutes);
 
+// Phase 6: Register new auxiliary routes
+app.use('/api/users', userRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 // --- Health Check ---
 app.get('/api/health', (req, res) => {
   res.json({ 
     success: true, 
     message: 'ISP Billing API is running', 
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 

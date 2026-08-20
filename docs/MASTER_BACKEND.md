@@ -109,3 +109,29 @@ All wrapped in try/catch. Router unreachable = log error, don't crash.
 | POST | /api/routers/:id/test | JWT | Test connection |
 | POST | /api/routers/bulk/suspend | JWT+ADMIN | Bulk suspend |
 | POST | /api/routers/bulk/restore | JWT+ADMIN | Bulk restore |
+
+## 11. Phase 6 Services
+- UserService: CRUD, password change, profile update
+- AuditService: Log retrieval with filters and stats
+- FinanceService: Income/expense tracking, monthly summaries
+- NotificationService: In-app notifications
+
+## 12. New Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/users | JWT+ADMIN | List users |
+| POST | /api/users | JWT+ADMIN | Create user |
+| PUT | /api/users/:id | JWT+ADMIN | Update user |
+| DELETE | /api/users/:id | JWT+ADMIN | Delete user |
+| POST | /api/users/change-password | JWT | Change password |
+| PUT | /api/users/profile/me | JWT | Update own profile |
+| GET | /api/audit | JWT+ADMIN/MANAGER | Audit logs |
+| GET | /api/audit/stats | JWT+ADMIN/MANAGER | Audit stats |
+| GET | /api/finance/transactions | JWT | Finance transactions |
+| GET | /api/finance/monthly-summary | JWT | Monthly summary |
+| POST | /api/finance/income | JWT | Add income |
+| POST | /api/finance/expense | JWT | Add expense |
+| GET | /api/notifications | JWT | User notifications |
+| GET | /api/notifications/unread-count | JWT | Unread count |
+| POST | /api/notifications/:id/read | JWT | Mark as read |
+| POST | /api/notifications/mark-all-read | JWT | Mark all read |

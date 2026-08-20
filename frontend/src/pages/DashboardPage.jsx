@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { customerApi } from '../services/customerApi';
 import { invoiceApi } from '../services/invoiceApi';
-import { Users, Wifi, CreditCard, AlertTriangle, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { activityApi } from '../services/activityApi';
+import { Users, Wifi, CreditCard, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import useAuthStore from '../store/authStore';
 
@@ -11,7 +12,6 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const firstName = user?.fullName?.split(' ')[0] || 'Admin';
 
-  // Fetch real stats
   const { data: customersData } = useQuery({
     queryKey: ['customers', { page: 1, limit: 1 }],
     queryFn: () => customerApi.getAll({ page: 1, limit: 1 }).then(res => res.data.data),
@@ -23,12 +23,17 @@ export default function DashboardPage() {
     queryFn: () => invoiceApi.getMonthlySummary(currentMonth).then(res => res.data.data),
   });
 
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['recentActivities'],
+    queryFn: () => activityApi.getRecent(5).then(res => res.data.data),
+    refetchInterval: 30000,
+  });
+
   const totalCustomers = customersData?.pagination?.total || 0;
   const activeCustomers = customersData?.customers?.filter(c => c.status === 'ACTIVE').length || 0;
   const suspendedCustomers = customersData?.customers?.filter(c => c.status === 'SUSPENDED').length || 0;
   const dueAmount = summaryData?.totalDue || 0;
 
-  // Mock revenue data for chart (replace with real data later)
   const revenueData = [
     { month: 'Jan', revenue: 45000 },
     { month: 'Feb', revenue: 52000 },
@@ -89,49 +94,94 @@ export default function DashboardPage() {
     },
   ];
 
-  const recentActivities = [
-    { id: 1, text: 'Customer "Rahim" paid ৳1,000 via bKash', time: '2 hours ago', type: 'payment' },
-    { id: 2, text: 'Invoice #2026-08-001 generated', time: '5 hours ago', type: 'invoice' },
-    { id: 3, text: 'Customer "Karim" suspended (overdue)', time: '1 day ago', type: 'suspend' },
-    { id: 4, text: 'New package "Premium 100Mbps" created', time: '2 days ago', type: 'package' },
-  ];
+  const formatActivityMessage = (activity) => {
+    try {
+      const details = JSON.parse(activity.details || '{}');
+      
+      switch (activity.action) {
+        case 'GENERATE_INVOICES':
+          return `Generated ${details.results?.created || 0} invoices (${details.results?.skipped || 0} skipped) for ${details.month}`;
+        case 'CREATE_CUSTOMER':
+          return `Created new customer: ${details.name}`;
+        case 'UPDATE_CUSTOMER':
+          return `Updated customer: ${details.name}`;
+        case 'DELETE_CUSTOMER':
+          return `Deleted customer: ${details.name}`;
+        case 'SUSPEND_CUSTOMER':
+          return `Suspended customer: ${details.name}`;
+        case 'RESTORE_CUSTOMER':
+          return `Restored customer: ${details.name}`;
+        case 'RECORD_PAYMENT':
+          return `Recorded payment of ৳${details.amount} via ${details.method}`;
+        case 'LOGIN':
+          return `User ${details.username} logged in`;
+        case 'LOGOUT':
+          return `User ${details.username} logged out`;
+        case 'BULK_SUSPEND':
+          return `Bulk suspended ${details.results?.success || 0} customers (${details.results?.failed || 0} failed)`;
+        case 'BULK_RESTORE':
+          return `Bulk restored ${details.results?.success || 0} customers (${details.results?.failed || 0} failed)`;
+        case 'CREATE_PACKAGE':
+          return `Created package: ${details.name}`;
+        case 'CREATE_ROUTER':
+          return `Added router: ${details.name}`;
+        default:
+          return activity.action.replace(/_/g, ' ');
+      }
+    } catch (error) {
+      return activity.action.replace(/_/g, ' ');
+    }
+  };
+
+  const recentActivities = activityData?.logs?.map(log => ({
+    id: log.id,
+    text: formatActivityMessage(log),
+    time: new Date(log.createdAt).toLocaleString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      day: 'numeric',
+      month: 'short'
+    }),
+    type: log.action.toLowerCase().includes('payment') ? 'payment' : 
+          log.action.toLowerCase().includes('customer') ? 'customer' : 
+          log.action.toLowerCase().includes('invoice') ? 'invoice' : 'system',
+    user: log.user?.fullName || 'System',
+  })) || [];
 
   const getActivityIcon = (type) => {
     const icons = {
       payment: '💰',
-      invoice: '',
-      suspend: '️',
-      package: '',
+      customer: '👤',
+      invoice: '📄',
+      system: '⚙️',
     };
     return icons[type] || '📌';
   };
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
             Welcome back, {firstName} 👋
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Here's what's happening with your ISP today
           </p>
         </div>
-        <div className="text-sm text-slate-500 bg-white px-4 py-2 rounded-lg border border-slate-200">
+        <div className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
           📅 {new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow duration-200"
+            className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-shadow duration-200"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className={`${stat.bgColor} p-2.5 rounded-lg`}>
+              <div className={`${stat.bgColor} dark:bg-opacity-20 p-2.5 rounded-lg`}>
                 <stat.icon className={`w-5 h-5 ${stat.textColor}`} />
               </div>
               <div className={`flex items-center space-x-1 text-xs font-medium ${
@@ -141,25 +191,23 @@ export default function DashboardPage() {
                 <span>{stat.change}</span>
               </div>
             </div>
-            <p className="text-sm text-slate-500 mb-1">{stat.label}</p>
-            <p className="text-2xl lg:text-3xl font-bold text-slate-900">{stat.value}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{stat.label}</p>
+            <p className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">{stat.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Revenue Overview</h3>
-              <p className="text-sm text-slate-500">Monthly collection trend</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Revenue Overview</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Monthly collection trend</p>
             </div>
             <div className="flex items-center space-x-2 text-sm">
               <span className="flex items-center space-x-1">
                 <div className="w-3 h-3 rounded-full bg-primary"></div>
-                <span className="text-slate-600">Revenue</span>
+                <span className="text-slate-600 dark:text-slate-300">Revenue</span>
               </span>
             </div>
           </div>
@@ -197,11 +245,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Status Pie Chart */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-slate-900">Customer Status</h3>
-            <p className="text-sm text-slate-500">Distribution overview</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Customer Status</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Distribution overview</p>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -228,37 +275,48 @@ export default function DashboardPage() {
               <div key={item.name} className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }}></div>
-                  <span className="text-slate-600">{item.name}</span>
+                  <span className="text-slate-600 dark:text-slate-300">{item.name}</span>
                 </div>
-                <span className="font-medium text-slate-900">{item.value}</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">{item.value}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
-            <p className="text-sm text-slate-500">Latest system events</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Recent Activity</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Latest system events</p>
           </div>
           <button className="text-sm text-primary hover:underline">View all</button>
         </div>
         <div className="space-y-3">
-          {recentActivities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-            >
-              <div className="text-xl flex-shrink-0">{getActivityIcon(activity.type)}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-700">{activity.text}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{activity.time}</p>
+          {activityLoading ? (
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">Loading activities...</div>
+          ) : recentActivities.length === 0 ? (
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">No recent activities found</div>
+          ) : (
+            recentActivities.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-start space-x-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <div className="text-xl flex-shrink-0">{getActivityIcon(activity.type)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 font-medium truncate" title={activity.text}>
+                    {activity.text}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-0.5">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{activity.user}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">•</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{activity.time}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

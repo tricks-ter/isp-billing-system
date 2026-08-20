@@ -12,6 +12,12 @@ import PaymentsPage from './pages/PaymentsPage';
 import ReportsPage from './pages/ReportsPage';
 import RoutersPage from './pages/RoutersPage';
 import LiveStatusPage from './pages/LiveStatusPage';
+// Phase 6 Imports
+import FinancePage from './pages/FinancePage';
+import UsersPage from './pages/UsersPage';
+import AuditLogsPage from './pages/AuditLogsPage';
+import SettingsPage from './pages/SettingsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,9 +48,14 @@ function App() {
               <Route path="/packages" element={<PackagesPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
               <Route path="/routers" element={<RoutersPage />} />
               <Route path="/live-status" element={<LiveStatusPage />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/audit-logs" element={<AuditLogsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
