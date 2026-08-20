@@ -12,7 +12,7 @@ import BillingPage from './pages/BillingPage';
 import PaymentsPage from './pages/PaymentsPage';
 import ReportsPage from './pages/ReportsPage';
 import RoutersPage from './pages/RoutersPage';
-import RouterDetailPage from './pages/RouterDetailPage';  // NEW
+import RouterDetailPage from './pages/RouterDetailPage';
 import LiveStatusPage from './pages/LiveStatusPage';
 import FinancePage from './pages/FinancePage';
 import UsersPage from './pages/UsersPage';
@@ -50,7 +50,7 @@ function App() {
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/routers" element={<RoutersPage />} />
-              <Route path="/routers/:id" element={<RouterDetailPage />} /> {/* NEW */}
+              <Route path="/routers/:id" element={<RouterDetailPage />} />
               <Route path="/live-status" element={<LiveStatusPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/reports" element={<ReportsPage />} />

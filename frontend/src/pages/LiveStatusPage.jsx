@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 export default function LiveStatusPage() {
   const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [search, setSearch] = useState('');
-  const [routerFilter, setRouterFilter] = useState('all'); // NEW
+  const [routerFilter, setRouterFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
@@ -19,7 +19,6 @@ export default function LiveStatusPage() {
     refetchInterval: 30000,
   });
 
-  // Compute router summary
   const routersSummary = useMemo(() => {
     if (!data?.customers) return [];
     const map = {};
@@ -35,14 +34,12 @@ export default function LiveStatusPage() {
     return Object.entries(map).map(([name, stats]) => ({ name, ...stats }));
   }, [data]);
 
-  // Filter customers by router
   const filteredCustomers = useMemo(() => {
     if (!data?.customers) return [];
     if (routerFilter === 'all') return data.customers;
     return data.customers.filter(c => (c.routerName || 'No Router') === routerFilter);
   }, [data, routerFilter]);
 
-  // Search filter
   const searchedCustomers = useMemo(() => {
     return filteredCustomers.filter(c =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||

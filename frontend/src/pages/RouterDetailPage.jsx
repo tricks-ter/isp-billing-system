@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Server, Info, Users, Activity, Layers, BarChart3,
   RefreshCw, Plus, Edit, Trash2, Loader2,
-  AlertCircle, Eye
+  AlertCircle, Search, X, Power, PowerOff, LogOut
 } from 'lucide-react';
 import { routerApi } from '../services/routerApi';
 import Button from '../components/Button';
@@ -22,19 +22,37 @@ const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Helper to format uptime (HH:MM:SS)
-const formatUptime = (uptime) => {
-  if (!uptime) return '-';
-  return uptime;
-};
+// Helper to format uptime
+const formatUptime = (uptime) => uptime || '-';
 
 export default function RouterDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('info');
+
+  // PPPoE state
   const [isPppoeFormOpen, setIsPppoeFormOpen] = useState(false);
   const [editingPppoe, setEditingPppoe] = useState(null);
+  const [pppoePage, setPppoePage] = useState(1);
+  const [pppoeLimit, setPppoeLimit] = useState(50);
+  const [pppoeSearch, setPppoeSearch] = useState('');
+  const [pppoeStatus, setPppoeStatus] = useState('');
+
+  // Sessions state
+  const [sessionPage, setSessionPage] = useState(1);
+  const [sessionLimit, setSessionLimit] = useState(50);
+  const [sessionSearch, setSessionSearch] = useState('');
+
+  // Profiles state
+  const [profilePage, setProfilePage] = useState(1);
+  const [profileLimit, setProfileLimit] = useState(50);
+  const [profileSearch, setProfileSearch] = useState('');
+
+  // Queues state
+  const [queuePage, setQueuePage] = useState(1);
+  const [queueLimit, setQueueLimit] = useState(50);
+  const [queueSearch, setQueueSearch] = useState('');
 
   // Fetch router details
   const { data: router, isLoading: routerLoading } = useQuery({
@@ -49,40 +67,73 @@ export default function RouterDetailPage() {
     enabled: activeTab === 'info',
   });
 
-  // Fetch PPPoE secrets
-  const { data: pppoeSecrets, isLoading: pppoeLoading, refetch: refetchPppoe } = useQuery({
-    queryKey: ['pppoeSecrets', id],
-    queryFn: () => routerApi.getPppoeSecrets(id).then(res => res.data.data),
+  // Fetch PPPoE secrets (server-side paginated)
+  const {
+    data: pppoeData,
+    isLoading: pppoeLoading,
+    refetch: refetchPppoe
+  } = useQuery({
+    queryKey: ['pppoeSecretsPaginated', id, pppoePage, pppoeLimit, pppoeSearch, pppoeStatus],
+    queryFn: () => routerApi.getPppoeSecretsPaginated(id, {
+      page: pppoePage,
+      limit: pppoeLimit,
+      search: pppoeSearch,
+      status: pppoeStatus
+    }).then(res => res.data.data),
     enabled: activeTab === 'pppoe',
   });
 
-  // Fetch active sessions
-  const { data: activeSessions, isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
-    queryKey: ['activeSessions', id],
-    queryFn: () => routerApi.getActiveSessions(id).then(res => res.data.data),
+  // Fetch active sessions (server-side paginated)
+  const {
+    data: sessionData,
+    isLoading: sessionsLoading,
+    refetch: refetchSessions
+  } = useQuery({
+    queryKey: ['activeSessionsPaginated', id, sessionPage, sessionLimit, sessionSearch],
+    queryFn: () => routerApi.getActiveSessionsPaginated(id, {
+      page: sessionPage,
+      limit: sessionLimit,
+      search: sessionSearch
+    }).then(res => res.data.data),
     enabled: activeTab === 'sessions',
   });
 
-  // Fetch profiles
-  const { data: profiles, isLoading: profilesLoading, refetch: refetchProfiles } = useQuery({
-    queryKey: ['profiles', id],
-    queryFn: () => routerApi.getProfiles(id).then(res => res.data.data),
+  // Fetch profiles (server-side paginated)
+  const {
+    data: profileData,
+    isLoading: profilesLoading,
+    refetch: refetchProfiles
+  } = useQuery({
+    queryKey: ['profilesPaginated', id, profilePage, profileLimit, profileSearch],
+    queryFn: () => routerApi.getProfilesPaginated(id, {
+      page: profilePage,
+      limit: profileLimit,
+      search: profileSearch
+    }).then(res => res.data.data),
     enabled: activeTab === 'profiles',
   });
 
-  // Fetch queues
-  const { data: queues, isLoading: queuesLoading, refetch: refetchQueues } = useQuery({
-    queryKey: ['queues', id],
-    queryFn: () => routerApi.getSimpleQueues(id).then(res => res.data.data),
+  // Fetch queues (server-side paginated)
+  const {
+    data: queueData,
+    isLoading: queuesLoading,
+    refetch: refetchQueues
+  } = useQuery({
+    queryKey: ['queuesPaginated', id, queuePage, queueLimit, queueSearch],
+    queryFn: () => routerApi.getSimpleQueuesPaginated(id, {
+      page: queuePage,
+      limit: queueLimit,
+      search: queueSearch
+    }).then(res => res.data.data),
     enabled: activeTab === 'queues',
   });
 
-  // Mutations for PPPoE secrets
+  // --- Mutations ---
   const createPppoeMutation = useMutation({
     mutationFn: (data) => routerApi.createPppoeSecret(id, data),
     onSuccess: () => {
       toast.success('PPPoE secret created');
-      queryClient.invalidateQueries(['pppoeSecrets', id]);
+      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
       setIsPppoeFormOpen(false);
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to create'),
@@ -92,7 +143,7 @@ export default function RouterDetailPage() {
     mutationFn: ({ username, data }) => routerApi.updatePppoeSecret(id, username, data),
     onSuccess: () => {
       toast.success('PPPoE secret updated');
-      queryClient.invalidateQueries(['pppoeSecrets', id]);
+      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
       setIsPppoeFormOpen(false);
       setEditingPppoe(null);
     },
@@ -103,9 +154,27 @@ export default function RouterDetailPage() {
     mutationFn: (username) => routerApi.deletePppoeSecret(id, username),
     onSuccess: () => {
       toast.success('PPPoE secret deleted');
-      queryClient.invalidateQueries(['pppoeSecrets', id]);
+      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete'),
+  });
+
+  const togglePppoeMutation = useMutation({
+    mutationFn: ({ username, disable }) => routerApi.togglePppoeSecret(id, username, disable),
+    onSuccess: (_, { username, disable }) => {
+      toast.success(`PPPoE secret ${disable ? 'disabled' : 'enabled'}`);
+      queryClient.invalidateQueries(['pppoeSecretsPaginated', id]);
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to toggle'),
+  });
+
+  const removeSessionMutation = useMutation({
+    mutationFn: (username) => routerApi.removeActiveSession(id, username),
+    onSuccess: (_, username) => {
+      toast.success(`Session ${username} disconnected`);
+      queryClient.invalidateQueries(['activeSessionsPaginated', id]);
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to disconnect'),
   });
 
   const handleDeletePppoe = (username) => {
@@ -127,7 +196,16 @@ export default function RouterDetailPage() {
     }
   };
 
-  // Refresh all data for current tab
+  const handleTogglePppoe = (username, currentDisabled) => {
+    togglePppoeMutation.mutate({ username, disable: !currentDisabled });
+  };
+
+  const handleDisconnectSession = (username) => {
+    if (window.confirm(`Disconnect session "${username}"?`)) {
+      removeSessionMutation.mutate(username);
+    }
+  };
+
   const handleRefresh = () => {
     switch (activeTab) {
       case 'info': refetchInfo(); break;
@@ -158,6 +236,8 @@ export default function RouterDetailPage() {
       </div>
     );
   }
+
+  // --- Tab renderers ---
 
   const renderInfoTab = () => {
     if (infoLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
@@ -197,204 +277,381 @@ export default function RouterDetailPage() {
     );
   };
 
+  // --- Render helper for paginated tables with filter ---
+  const renderPaginatedTable = ({
+    data,
+    total,
+    page,
+    setPage,
+    limit,
+    setLimit,
+    search,
+    setSearch,
+    searchPlaceholder = 'Search...',
+    statusFilter,
+    setStatusFilter,
+    statusOptions,
+    loading,
+    columns,
+    renderRow,
+    keyField,
+    emptyMessage,
+    extraActions
+  }) => {
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return (
+      <div>
+        {/* Filter bar */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {statusFilter !== undefined && statusOptions && (
+            <div className="sm:w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="">All status</option>
+                {statusOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {extraActions && <div className="flex items-center">{extraActions}</div>}
+        </div>
+
+        {loading ? (
+          <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+        ) : total === 0 ? (
+          <div className="py-8 text-center text-slate-500">{emptyMessage}</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    {columns.map((col) => (
+                      <th key={col.key} className={`px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase ${col.className || ''}`}>
+                        {col.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {data.map((item) => (
+                    <tr key={item[keyField] || item.id || item.name} className="hover:bg-slate-50">
+                      {renderRow(item)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-slate-200 mt-4 gap-2">
+              <div className="text-sm text-slate-500">
+                Showing {((page - 1) * limit) + 1}–{Math.min(page * limit, total)} of {total}
+              </div>
+              <div className="flex items-center space-x-2">
+                <select
+                  value={limit}
+                  onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                  className="border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  {[20, 50, 100, 200].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 1}
+                    onClick={() => setPage(p => p - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === totalPages}
+                    onClick={() => setPage(p => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // PPPoE tab
   const renderPppoeTab = () => {
-    if (pppoeLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
-    const secrets = pppoeSecrets || [];
+    const secrets = pppoeData?.data || [];
+    const total = pppoeData?.total || 0;
+
+    const columns = [
+      { key: 'username', label: 'Username' },
+      { key: 'profile', label: 'Profile' },
+      { key: 'status', label: 'Status' },
+      { key: 'comment', label: 'Comment' },
+      { key: 'actions', label: 'Actions', className: 'text-right' },
+    ];
+
+    const renderRow = (secret) => (
+      <>
+        <td className="px-4 py-3 text-sm font-mono text-slate-900">{secret.name}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{secret.profile}</td>
+        <td className="px-4 py-3">
+          {secret.disabled ? (
+            <Badge variant="danger">Disabled</Badge>
+          ) : (
+            <Badge variant="success">Enabled</Badge>
+          )}
+        </td>
+        <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{secret.comment || '-'}</td>
+        <td className="px-4 py-3 text-right">
+          <div className="flex items-center justify-end space-x-1">
+            <button
+              onClick={() => handleTogglePppoe(secret.name, secret.disabled)}
+              className={`p-1.5 rounded-lg ${secret.disabled ? 'text-green-600 hover:bg-green-50' : 'text-amber-600 hover:bg-amber-50'}`}
+              title={secret.disabled ? 'Enable' : 'Disable'}
+            >
+              {secret.disabled ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => handleEditPppoe(secret)}
+              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+              title="Edit"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleDeletePppoe(secret.name)}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </td>
+      </>
+    );
 
     return (
       <div>
         <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-slate-500">{secrets.length} secrets</p>
+          <p className="text-sm text-slate-500">{total} secrets</p>
           <Button size="sm" onClick={() => { setEditingPppoe(null); setIsPppoeFormOpen(true); }}>
             <Plus className="w-4 h-4" />
             <span>Add Secret</span>
           </Button>
         </div>
-
-        {secrets.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">No PPPoE secrets found</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Username</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Profile</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Comment</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {secrets.map((secret) => (
-                  <tr key={secret.id || secret.name} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-mono text-slate-900">{secret.name}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{secret.profile}</td>
-                    <td className="px-4 py-3">
-                      {secret.disabled ? (
-                        <Badge variant="danger">Disabled</Badge>
-                      ) : (
-                        <Badge variant="success">Enabled</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{secret.comment || '-'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end space-x-1">
-                        <button
-                          onClick={() => handleEditPppoe(secret)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeletePppoe(secret.name)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {renderPaginatedTable({
+          data: secrets,
+          total,
+          page: pppoePage,
+          setPage: setPppoePage,
+          limit: pppoeLimit,
+          setLimit: setPppoeLimit,
+          search: pppoeSearch,
+          setSearch: setPppoeSearch,
+          searchPlaceholder: 'Search by username or comment...',
+          statusFilter: pppoeStatus,
+          setStatusFilter: setPppoeStatus,
+          statusOptions: [
+            { value: 'enabled', label: 'Enabled' },
+            { value: 'disabled', label: 'Disabled' },
+          ],
+          loading: pppoeLoading,
+          columns,
+          renderRow,
+          keyField: 'name',
+          emptyMessage: 'No PPPoE secrets found',
+        })}
       </div>
     );
   };
 
+  // Sessions tab
   const renderSessionsTab = () => {
-    if (sessionsLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
-    const sessions = activeSessions || [];
+    const sessions = sessionData?.data || [];
+    const total = sessionData?.total || 0;
+
+    const columns = [
+      { key: 'username', label: 'Username' },
+      { key: 'address', label: 'IP Address' },
+      { key: 'uptime', label: 'Uptime' },
+      { key: 'bytesIn', label: 'Bytes In' },
+      { key: 'bytesOut', label: 'Bytes Out' },
+      { key: 'actions', label: 'Actions', className: 'text-right' },
+    ];
+
+    const renderRow = (session) => (
+      <>
+        <td className="px-4 py-3 text-sm font-mono text-slate-900">{session.username}</td>
+        <td className="px-4 py-3 text-sm font-mono text-slate-600">{session.address}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{formatUptime(session.uptime)}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesIn)}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesOut)}</td>
+        <td className="px-4 py-3 text-right">
+          <button
+            onClick={() => handleDisconnectSession(session.username)}
+            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+            title="Disconnect"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </td>
+      </>
+    );
 
     return (
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-slate-500">{sessions.length} active sessions</p>
-        </div>
-
-        {sessions.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">No active sessions</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Username</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">IP Address</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Uptime</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Bytes In</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Bytes Out</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {sessions.map((session) => (
-                  <tr key={session.id || session.username} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-mono text-slate-900">{session.username}</td>
-                    <td className="px-4 py-3 text-sm font-mono text-slate-600">{session.address}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{formatUptime(session.uptime)}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesIn)}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesOut)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="text-sm text-slate-500 mb-4">{total} active sessions</p>
+        {renderPaginatedTable({
+          data: sessions,
+          total,
+          page: sessionPage,
+          setPage: setSessionPage,
+          limit: sessionLimit,
+          setLimit: setSessionLimit,
+          search: sessionSearch,
+          setSearch: setSessionSearch,
+          searchPlaceholder: 'Search by username...',
+          loading: sessionsLoading,
+          columns,
+          renderRow,
+          keyField: 'username',
+          emptyMessage: 'No active sessions',
+        })}
       </div>
     );
   };
 
+  // Profiles tab
   const renderProfilesTab = () => {
-    if (profilesLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
-    const profileList = profiles || [];
+    const profiles = profileData?.data || [];
+    const total = profileData?.total || 0;
+
+    const columns = [
+      { key: 'name', label: 'Name' },
+      { key: 'localAddress', label: 'Local Address' },
+      { key: 'remoteAddress', label: 'Remote Address' },
+      { key: 'rateLimit', label: 'Rate Limit' },
+      { key: 'comment', label: 'Comment' },
+    ];
+
+    const renderRow = (profile) => (
+      <>
+        <td className="px-4 py-3 text-sm font-semibold text-slate-900">{profile.name}</td>
+        <td className="px-4 py-3 text-sm font-mono text-slate-600">{profile.localAddress || '-'}</td>
+        <td className="px-4 py-3 text-sm font-mono text-slate-600">{profile.remoteAddress || '-'}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{profile.rateLimit || '-'}</td>
+        <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{profile.comment || '-'}</td>
+      </>
+    );
 
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-4">{profileList.length} profiles</p>
-        {profileList.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">No profiles found</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Local Address</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Remote Address</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Rate Limit</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Comment</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {profileList.map((profile) => (
-                  <tr key={profile.id || profile.name} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-900">{profile.name}</td>
-                    <td className="px-4 py-3 text-sm font-mono text-slate-600">{profile.localAddress || '-'}</td>
-                    <td className="px-4 py-3 text-sm font-mono text-slate-600">{profile.remoteAddress || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{profile.rateLimit || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{profile.comment || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="text-sm text-slate-500 mb-4">{total} profiles</p>
+        {renderPaginatedTable({
+          data: profiles,
+          total,
+          page: profilePage,
+          setPage: setProfilePage,
+          limit: profileLimit,
+          setLimit: setProfileLimit,
+          search: profileSearch,
+          setSearch: setProfileSearch,
+          searchPlaceholder: 'Search by name or comment...',
+          loading: profilesLoading,
+          columns,
+          renderRow,
+          keyField: 'name',
+          emptyMessage: 'No profiles found',
+        })}
       </div>
     );
   };
 
+  // Queues tab
   const renderQueuesTab = () => {
-    if (queuesLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
-    const queueList = queues || [];
+    const queues = queueData?.data || [];
+    const total = queueData?.total || 0;
+
+    const columns = [
+      { key: 'name', label: 'Name' },
+      { key: 'target', label: 'Target' },
+      { key: 'maxLimit', label: 'Max Limit' },
+      { key: 'status', label: 'Status' },
+      { key: 'comment', label: 'Comment' },
+    ];
+
+    const renderRow = (queue) => (
+      <>
+        <td className="px-4 py-3 text-sm font-semibold text-slate-900">{queue.name}</td>
+        <td className="px-4 py-3 text-sm font-mono text-slate-600">{queue.target}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{queue.maxLimit}</td>
+        <td className="px-4 py-3">
+          {queue.disabled ? (
+            <Badge variant="danger">Disabled</Badge>
+          ) : (
+            <Badge variant="success">Enabled</Badge>
+          )}
+        </td>
+        <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{queue.comment || '-'}</td>
+      </>
+    );
 
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-4">{queueList.length} queues</p>
-        {queueList.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">No queues found</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Target</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Max Limit</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Comment</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {queueList.map((queue) => (
-                  <tr key={queue.id || queue.name} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-900">{queue.name}</td>
-                    <td className="px-4 py-3 text-sm font-mono text-slate-600">{queue.target}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{queue.maxLimit}</td>
-                    <td className="px-4 py-3">
-                      {queue.disabled ? (
-                        <Badge variant="danger">Disabled</Badge>
-                      ) : (
-                        <Badge variant="success">Enabled</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{queue.comment || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="text-sm text-slate-500 mb-4">{total} queues</p>
+        {renderPaginatedTable({
+          data: queues,
+          total,
+          page: queuePage,
+          setPage: setQueuePage,
+          limit: queueLimit,
+          setLimit: setQueueLimit,
+          search: queueSearch,
+          setSearch: setQueueSearch,
+          searchPlaceholder: 'Search by name or comment...',
+          loading: queuesLoading,
+          columns,
+          renderRow,
+          keyField: 'name',
+          emptyMessage: 'No queues found',
+        })}
       </div>
     );
   };
 
+  // --- Main render ---
   return (
     <div className="space-y-6">
-      {/* Header with back button and router info */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <button
@@ -498,7 +755,7 @@ function PppoeForm({ initialData, onSubmit, isLoading, onCancel }) {
           onChange={(e) => setFormData({ ...formData, username: e.target.value })}
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
           required
-          disabled={!!initialData} // Can't change username on edit
+          disabled={!!initialData}
         />
       </div>
       <div>

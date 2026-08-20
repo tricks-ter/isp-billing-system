@@ -1,4 +1,4 @@
-// FILE: ./backend/src/services/mikrotikService.js
+// backend/src/services/mikrotikService.js
 const { RouterOSAPI } = require('routeros-api');
 const fs = require('fs').promises;
 const path = require('path');
@@ -32,7 +32,6 @@ class MikroTikService {
 
   async connectToRouter(router) {
     if (this.mockMode) return { mock: true, router };
-    
     try {
       const api = new RouterOSAPI({
         host: router.ipAddress,
@@ -41,7 +40,6 @@ class MikroTikService {
         port: router.apiPort || 8728,
         timeout: 10000,
       });
-      
       await api.connect();
       return api;
     } catch (error) {
@@ -51,35 +49,25 @@ class MikroTikService {
 
   async disconnect(api) {
     if (!this.mockMode && api && api.close) {
-      try { 
-        api.close(); 
-      } catch (e) { 
-        console.error('Disconnect error:', e);
-      }
+      try { api.close(); } catch (e) { console.error('Disconnect error:', e); }
     }
   }
 
-  // --- PPPoE Secret Management ---
+  // --- Existing methods (kept for backward compatibility) ---
   async addPppoeSecret(router, username, password, profile, comment = '') {
     const params = { username, password, profile, router: router.name, comment };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE secret created' };
       await this.log('ADD_PPPOE_SECRET', params, result);
-      console.log(`[MOCK] Added PPPoE: ${username}`);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
-      
-      // Check if user already exists
       const existing = await api.write('/ppp/secret/print', [`?name=${username}`]);
       if (existing.length > 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret ${username} already exists`);
       }
-      
       await api.write('/ppp/secret/add', [
         `=name=${username}`,
         `=password=${password}`,
@@ -88,9 +76,7 @@ class MikroTikService {
         comment ? `=comment=${comment}` : '',
         '=disabled=no',
       ]);
-      
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret created successfully' };
       await this.log('ADD_PPPOE_SECRET', params, result);
       return result;
@@ -102,31 +88,24 @@ class MikroTikService {
 
   async updatePppoeSecret(router, username, newPassword, newProfile) {
     const params = { username, newPassword, newProfile, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE secret updated' };
       await this.log('UPDATE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       const id = secrets[0]['.id'];
       const commands = [`.id=${id}`];
-      
       if (newPassword) commands.push(`=password=${newPassword}`);
       if (newProfile) commands.push(`=profile=${newProfile}`);
-      
       await api.write('/ppp/secret/set', commands);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret updated successfully' };
       await this.log('UPDATE_PPPOE_SECRET', params, result);
       return result;
@@ -138,25 +117,20 @@ class MikroTikService {
 
   async disablePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE disabled' };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=yes']);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret disabled successfully' };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
       return result;
@@ -168,25 +142,20 @@ class MikroTikService {
 
   async enablePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE enabled' };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=no']);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret enabled successfully' };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
       return result;
@@ -198,25 +167,20 @@ class MikroTikService {
 
   async removePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE removed' };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       await api.write('/ppp/secret/remove', [`.id=${secrets[0]['.id']}`]);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret removed successfully' };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
       return result;
@@ -226,6 +190,154 @@ class MikroTikService {
     }
   }
 
+  // --- NEW: Toggle PPPoE secret (enable/disable) ---
+  async togglePppoeSecret(router, username, disable) {
+    if (disable) {
+      return this.disablePppoeSecret(router, username);
+    } else {
+      return this.enablePppoeSecret(router, username);
+    }
+  }
+
+  // --- NEW: Paginated & filterable PPPoE secrets ---
+  async getPppoeSecretsPaginated(router, page = 1, limit = 50, search = '', status = '') {
+    const params = { router: router.name, page, limit, search, status };
+    if (this.mockMode) {
+      // Generate mock data
+      const all = [];
+      for (let i = 1; i <= 250; i++) {
+        all.push({
+          id: `mock_${i}`,
+          name: `user${i}`,
+          profile: i % 2 === 0 ? 'default' : 'premium',
+          disabled: i % 5 === 0,
+          comment: i % 3 === 0 ? 'mock comment' : '',
+        });
+      }
+      // Apply search filter
+      let filtered = all.filter(s => s.name.includes(search) || (s.comment && s.comment.includes(search)));
+      if (status === 'enabled') filtered = filtered.filter(s => !s.disabled);
+      else if (status === 'disabled') filtered = filtered.filter(s => s.disabled);
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_PPPOE_SECRETS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      // Build filter query
+      let filter = [];
+      if (search) filter.push(`?name=${search}`);
+      // Note: RouterOS API doesn't support status filter directly, we'll filter in code
+      const secrets = await api.write('/ppp/secret/print', filter);
+      await this.disconnect(api);
+
+      let filtered = secrets.map(s => ({
+        id: s['.id'],
+        name: s.name,
+        profile: s.profile,
+        disabled: s.disabled === 'true' || s.disabled === true,
+        comment: s.comment || '',
+        service: s.service || 'pppoe',
+      }));
+
+      if (search) filtered = filtered.filter(s => s.name.includes(search) || s.comment.includes(search));
+      if (status === 'enabled') filtered = filtered.filter(s => !s.disabled);
+      else if (status === 'disabled') filtered = filtered.filter(s => s.disabled);
+
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_PPPOE_SECRETS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    } catch (error) {
+      await this.log('GET_PPPOE_SECRETS_PAGINATED', params, { error: error.message });
+      throw new Error(`Failed to fetch PPPoE secrets: ${error.message}`);
+    }
+  }
+
+  // --- NEW: Paginated active sessions ---
+  async getActiveSessionsPaginated(router, page = 1, limit = 50, search = '') {
+    const params = { router: router.name, page, limit, search };
+    if (this.mockMode) {
+      const all = [];
+      for (let i = 1; i <= 120; i++) {
+        all.push({
+          id: `session_${i}`,
+          username: `user${i}`,
+          address: `192.168.88.${i}`,
+          uptime: `${Math.floor(i/10)}h ${i%60}m`,
+          bytesIn: i * 1000000,
+          bytesOut: i * 2000000,
+        });
+      }
+      let filtered = all.filter(s => s.username.includes(search));
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_ACTIVE_SESSIONS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      const sessions = await api.write('/ppp/active/print');
+      await this.disconnect(api);
+
+      let filtered = sessions.map(s => ({
+        id: s['.id'],
+        username: s.name,
+        address: s.address,
+        uptime: s.uptime,
+        bytesIn: parseInt(s['bytes-in']) || 0,
+        bytesOut: parseInt(s['bytes-out']) || 0,
+        service: s.service,
+        callerId: s['caller-id'] || '',
+      }));
+
+      if (search) filtered = filtered.filter(s => s.username.includes(search));
+
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_ACTIVE_SESSIONS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    } catch (error) {
+      await this.log('GET_ACTIVE_SESSIONS_PAGINATED', params, { error: error.message });
+      throw new Error(`Failed to fetch active sessions: ${error.message}`);
+    }
+  }
+
+  // --- NEW: Disconnect active session ---
+  async removeActiveSession(router, username) {
+    const params = { username, router: router.name };
+    if (this.mockMode) {
+      const result = { success: true, message: `Mock: Disconnected session ${username}` };
+      await this.log('REMOVE_ACTIVE_SESSION', params, result);
+      return result;
+    }
+    try {
+      const api = await this.connectToRouter(router);
+      // Find session by username
+      const sessions = await api.write('/ppp/active/print', [`?name=${username}`]);
+      if (sessions.length === 0) {
+        await this.disconnect(api);
+        throw new Error(`No active session found for ${username}`);
+      }
+      await api.write('/ppp/active/remove', [`.id=${sessions[0]['.id']}`]);
+      await this.disconnect(api);
+      const result = { success: true, message: `Session ${username} disconnected` };
+      await this.log('REMOVE_ACTIVE_SESSION', params, result);
+      return result;
+    } catch (error) {
+      await this.log('REMOVE_ACTIVE_SESSION', params, { error: error.message });
+      throw new Error(`Failed to disconnect session: ${error.message}`);
+    }
+  }
+
+  // --- Existing getters (unchanged but kept for other uses) ---
   async getPppoeSecrets(router) {
     if (this.mockMode) {
       return [
@@ -233,12 +345,10 @@ class MikroTikService {
         { name: 'user2', profile: 'premium', disabled: true, comment: 'Mock user 2' },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print');
       await this.disconnect(api);
-      
       return secrets.map(s => ({
         id: s['.id'],
         name: s.name,
@@ -253,19 +363,16 @@ class MikroTikService {
     }
   }
 
-  // --- Active Sessions ---
   async getActiveSessions(router) {
     if (this.mockMode) {
       return [
         { name: 'user1', address: '10.0.0.101', uptime: '01:23:45', bytesIn: 1234567, bytesOut: 7654321 },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const sessions = await api.write('/ppp/active/print');
       await this.disconnect(api);
-      
       return sessions.map(s => ({
         id: s['.id'],
         username: s.name,
@@ -282,7 +389,6 @@ class MikroTikService {
     }
   }
 
-  // --- Router Info ---
   async getRouterInfo(router) {
     if (this.mockMode) {
       return {
@@ -294,16 +400,11 @@ class MikroTikService {
         cpuLoad: '12%',
       };
     }
-
     try {
       const api = await this.connectToRouter(router);
-      
       const identity = await api.write('/system/identity/print');
       const resource = await api.write('/system/resource/print');
-      const clock = await api.write('/system/clock/print');
-      
       await this.disconnect(api);
-
       return {
         identity: identity[0]?.name || 'Unknown',
         version: resource[0]?.version || 'Unknown',
@@ -312,7 +413,6 @@ class MikroTikService {
         totalMemory: resource[0]?.['total-memory'] || 'Unknown',
         cpuLoad: resource[0]?.['cpu-load'] || 'Unknown',
         boardName: resource[0]?.['board-name'] || 'Unknown',
-        currentTime: clock[0]?.date + ' ' + clock[0]?.time || 'Unknown',
       };
     } catch (error) {
       throw new Error(`Failed to get router info: ${error.message}`);
@@ -325,17 +425,11 @@ class MikroTikService {
         success: true,
         mock: true,
         message: 'Mock Mode Active',
-        data: { 
-          identity: `${router.name} (Mock)`, 
-          version: '7.15 (Mock)', 
-          uptime: 'N/A' 
-        }
+        data: { identity: `${router.name} (Mock)`, version: '7.15 (Mock)', uptime: 'N/A' }
       };
     }
-
     try {
       const info = await this.getRouterInfo(router);
-      
       return {
         success: true,
         mock: false,
@@ -352,19 +446,16 @@ class MikroTikService {
     }
   }
 
-  // --- Simple Queue Management ---
   async getSimpleQueues(router) {
     if (this.mockMode) {
       return [
         { name: 'queue1', target: '10.0.0.101/32', maxLimit: '10M/10M', comment: 'Mock queue' },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const queues = await api.write('/queue/simple/print');
       await this.disconnect(api);
-      
       return queues.map(q => ({
         id: q['.id'],
         name: q.name,
@@ -379,7 +470,6 @@ class MikroTikService {
     }
   }
 
-  // --- Profile Management ---
   async getProfiles(router) {
     if (this.mockMode) {
       return [
@@ -387,12 +477,10 @@ class MikroTikService {
         { name: 'premium', localAddress: '10.0.0.1', remoteAddress: 'pool2', rateLimit: '50M/50M' },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const profiles = await api.write('/ppp/profile/print');
       await this.disconnect(api);
-      
       return profiles.map(p => ({
         id: p['.id'],
         name: p.name,
@@ -405,6 +493,26 @@ class MikroTikService {
       console.error(`Failed to get profiles from ${router.name}:`, error.message);
       return [];
     }
+  }
+
+  // --- NEW: Paginated profiles (for consistency) ---
+  async getProfilesPaginated(router, page = 1, limit = 50, search = '') {
+    const all = await this.getProfiles(router);
+    let filtered = all.filter(p => p.name.includes(search) || p.comment.includes(search));
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const data = filtered.slice(start, start + limit);
+    return { data, total };
+  }
+
+  // --- NEW: Paginated queues ---
+  async getSimpleQueuesPaginated(router, page = 1, limit = 50, search = '') {
+    const all = await this.getSimpleQueues(router);
+    let filtered = all.filter(q => q.name.includes(search) || q.comment.includes(search));
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const data = filtered.slice(start, start + limit);
+    return { data, total };
   }
 }
 
