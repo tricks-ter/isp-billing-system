@@ -25,9 +25,7 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet()); // Security headers
 
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL || 'https://yourdomain.com' // Replace with your actual frontend domain in production
-    : 'http://localhost:5173', // Vite dev server
+  origin: true,
   credentials: true,
 }));
 
