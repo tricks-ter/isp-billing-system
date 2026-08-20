@@ -1,36 +1,37 @@
+// FILE: ./backend/src/services/paymentService.js
 const prisma = require('../config/db');
-const mikrotikService = require('./mikrotikService'); // <-- ADDED: Required for auto-restore
+const mikrotikService = require('./mikrotikService');
 
 class PaymentService {
   async recordPayment(data, userId) {
     const { invoiceId, amount, method, notes } = data;
 
-    // Validate invoice exists (Include router details for auto-restore)
+    // 1. Fetch invoice and customer details BEFORE transaction
     const invoice = await prisma.invoice.findUnique({
       where: { id: parseInt(invoiceId) },
-      include: { 
-        payments: true, 
-        customer: { include: { router: true } } // <-- ADDED: Need router details
+      include: {
+        payments: true,
+        customer: { include: { router: true } }
       },
     });
 
     if (!invoice) throw new Error('Invoice not found');
 
-    // Calculate current paid amount
     const currentPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
     const remainingDue = invoice.total - currentPaid;
 
     if (amount > remainingDue) {
       throw new Error(`Payment amount (${amount}) exceeds due amount (${remainingDue})`);
     }
-
     if (amount <= 0) {
       throw new Error('Payment amount must be greater than 0');
     }
 
-    // Use transaction to ensure atomicity
+    // Track if we need to restore the customer AFTER the transaction
+    let customerRestored = false;
+
+    // 2. DATABASE TRANSACTION (Strictly DB operations only)
     const result = await prisma.$transaction(async (tx) => {
-      // Record payment
       const payment = await tx.payment.create({
         data: {
           invoiceId: parseInt(invoiceId),
@@ -41,7 +42,6 @@ class PaymentService {
         },
       });
 
-      // Update invoice status
       const newPaidAmount = currentPaid + parseFloat(amount);
       let newStatus = 'PARTIAL';
       if (newPaidAmount >= invoice.total) {
@@ -53,31 +53,33 @@ class PaymentService {
         data: { status: newStatus },
       });
 
-      // FIX #4: If fully paid and customer was suspended, restore them AND enable MikroTik
+      // Update DB status, but DO NOT call MikroTik API here
       if (newStatus === 'PAID' && invoice.customer.status === 'SUSPENDED') {
         await tx.customer.update({
           where: { id: invoice.customer.id },
           data: { status: 'ACTIVE' },
         });
-
-        // Call MikroTik to enable PPPoE
-        if (invoice.customer.routerId && invoice.customer.router) {
-          try {
-            await mikrotikService.enablePppoeSecret(
-              invoice.customer.router,
-              invoice.customer.pppoeUsername
-            );
-          } catch (error) {
-            console.error('Failed to enable PPPoE on auto-restore:', error);
-            // We don't throw here to avoid rolling back the successful payment
-          }
-        }
+        customerRestored = true;
       }
 
       return payment;
     });
 
-    // Log the action
+    // 3. EXTERNAL API CALL (Executed ONLY after DB transaction successfully commits)
+    if (customerRestored && invoice.customer.routerId && invoice.customer.router) {
+      try {
+        await mikrotikService.enablePppoeSecret(
+          invoice.customer.router,
+          invoice.customer.pppoeUsername
+        );
+      } catch (error) {
+        console.error('Failed to enable PPPoE on auto-restore:', error);
+        // We don't throw here to avoid confusing the user, 
+        // the payment is saved, router just needs manual sync.
+      }
+    }
+
+    // 4. Audit Log
     await prisma.auditLog.create({
       data: {
         userId,
@@ -98,7 +100,6 @@ class PaymentService {
   async getAllPayments(page = 1, limit = 20, filters = {}) {
     const skip = (page - 1) * limit;
     const where = {};
-
     if (filters.method) where.method = filters.method;
     if (filters.receivedBy) where.receivedBy = parseInt(filters.receivedBy);
     if (filters.fromDate || filters.toDate) {
@@ -113,16 +114,8 @@ class PaymentService {
         skip,
         take: limit,
         include: {
-          invoice: {
-            include: {
-              customer: {
-                select: { id: true, name: true, phone: true },
-              },
-            },
-          },
-          receiver: {
-            select: { id: true, fullName: true },
-          },
+          invoice: { include: { customer: { select: { id: true, name: true, phone: true } } } },
+          receiver: { select: { id: true, fullName: true } },
         },
         orderBy: { date: 'desc' },
       }),
@@ -131,12 +124,7 @@ class PaymentService {
 
     return {
       payments,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -147,18 +135,9 @@ class PaymentService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const payments = await prisma.payment.findMany({
-      where: {
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
+      where: { date: { gte: startOfDay, lte: endOfDay } },
       include: {
-        invoice: {
-          include: {
-            customer: { select: { name: true, phone: true } },
-          },
-        },
+        invoice: { include: { customer: { select: { name: true, phone: true } } } },
         receiver: { select: { fullName: true } },
       },
       orderBy: { date: 'desc' },
@@ -170,13 +149,7 @@ class PaymentService {
       return acc;
     }, {});
 
-    return {
-      date,
-      totalAmount,
-      totalPayments: payments.length,
-      byMethod,
-      payments,
-    };
+    return { date, totalAmount, totalPayments: payments.length, byMethod, payments };
   }
 }
 

@@ -1,3 +1,4 @@
+// FILE: ./backend/src/services/routerService.js
 const prisma = require('../config/db');
 const mikrotikService = require('./mikrotikService');
 
@@ -120,12 +121,12 @@ class RouterService {
     if (!router) throw new Error('Router not found');
 
     try {
-      const connection = await mikrotikService.connect(router);
+      // BUG FIX: Changed from mikrotikService.connect(router) to connectToRouter(router)
+      const api = await mikrotikService.connectToRouter(router);
       
-      // In mock mode, simulate a delay
-      if (mikrotikService.mockMode) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        mikrotikService.disconnect(connection);
+      // In mock mode, connectToRouter returns { mock: true, router }
+      if (api.mock) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
         return {
           success: true,
           message: 'Connection successful (Mock Mode)',
@@ -139,11 +140,10 @@ class RouterService {
       }
 
       // Real connection test
-      const api = connection;
       const identity = await api.write('/system/identity/print');
       const resource = await api.write('/system/resource/print');
       
-      mikrotikService.disconnect(connection);
+      mikrotikService.disconnect(api);
 
       return {
         success: true,
@@ -173,7 +173,7 @@ class RouterService {
     });
 
     // In mock mode, simulate online/offline status
-    if (mikrotikService.mockMode) {
+    if (mikrotikService.getMockMode()) {
       const customersWithStatus = customers.map(customer => ({
         ...customer,
         routerName: customer.router?.name || 'No Router',
@@ -195,20 +195,37 @@ class RouterService {
       };
     }
 
-    // Real implementation would query MikroTik for active PPPoE sessions
-    return {
-      total: customers.length,
-      online: 0,
-      offline: 0,
-      customers: customers.map(c => ({
+    // BUG FIX: REAL IMPLEMENTATION - Actually query MikroTik for active PPPoE sessions
+    const routers = await prisma.router.findMany({ where: { isActive: true } });
+    const activeSessions = [];
+    
+    for (const router of routers) {
+      try {
+        const sessions = await mikrotikService.getRouterActiveSessions(router);
+        activeSessions.push(...sessions);
+      } catch (error) {
+        console.error(`[LiveStatus] Failed to fetch sessions from ${router.name}:`, error.message);
+      }
+    }
+
+    // Map customers with their real online status based on PPPoE username
+    const customersWithStatus = customers.map(c => {
+      const session = activeSessions.find(s => s.username === c.pppoeUsername);
+      return {
         ...c,
         routerName: c.router?.name || 'No Router',
         routerIp: c.router?.ipAddress || '-',
-        isOnline: false,
-        uptime: '-',
-        ipAddress: '-',
-      })),
-      message: 'Real live status requires MikroTik connection',
+        isOnline: !!session,
+        uptime: session?.uptime || '-',
+        ipAddress: session?.address || '-',
+      };
+    });
+
+    return {
+      total: customersWithStatus.length,
+      online: customersWithStatus.filter(c => c.isOnline).length,
+      offline: customersWithStatus.filter(c => !c.isOnline).length,
+      customers: customersWithStatus,
     };
   }
 

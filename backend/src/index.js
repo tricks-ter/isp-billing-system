@@ -1,3 +1,4 @@
+// FILE: ./backend/src/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -17,20 +18,19 @@ const userRoutes = require('./routes/userRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const settingsRoutes = require('./routes/settingsRoutes'); // <-- ADDED
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middleware ---
 app.use(helmet());
-
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? process.env.FRONTEND_URL || 'https://yourdomain.com'
     : 'http://localhost:5173',
   credentials: true,
 }));
-
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
@@ -47,12 +47,13 @@ app.use('/api/users', userRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/settings', settingsRoutes); // <-- ADDED
 
 // --- Health Check ---
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'ISP Billing API is running', 
+  res.json({
+    success: true,
+    message: 'ISP Billing API is running',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });

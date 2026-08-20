@@ -1,3 +1,4 @@
+// FILE: ./frontend/src/components/Login.jsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,7 +9,6 @@ import { authApi } from '../services/authApi';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
 
-// Zod validation schema
 const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -34,8 +34,6 @@ export default function Login() {
     try {
       const response = await authApi.login(data);
       const { token, user } = response.data.data;
-
-      // Save to Zustand store + localStorage
       login(user, token);
       toast.success(`Welcome back, ${user.fullName}!`);
       navigate('/dashboard');
@@ -50,8 +48,6 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-slate-100 to-indigo-100 p-4">
       <div className="w-full max-w-md bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/50 p-8 space-y-6">
-        
-        {/* Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-2">
             <Wifi className="w-8 h-8" />
@@ -60,9 +56,7 @@ export default function Login() {
           <p className="text-sm text-slate-500">Sign in to manage your network</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          
           {/* Username */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Username</label>
@@ -71,6 +65,7 @@ export default function Login() {
               <input
                 {...register('username')}
                 type="text"
+                autoComplete="username"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="admin"
               />
@@ -88,6 +83,7 @@ export default function Login() {
               <input
                 {...register('password')}
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="••••••••"
               />
@@ -95,6 +91,7 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>

@@ -7,6 +7,8 @@
 │   │   ├── migrations
 │   │   │   ├── 20260820100955_init_schema
 │   │   │   │   └── migration.sql
+│   │   │   ├── 20260820162431_phase6_auxiliary
+│   │   │   │   └── migration.sql
 │   │   │   └── migration_lock.toml
 │   │   ├── schema.prisma
 │   │   └── seed.js
@@ -14,31 +16,43 @@
 │   │   ├── config
 │   │   │   └── db.js
 │   │   ├── controllers
+│   │   │   ├── auditController.js
 │   │   │   ├── authController.js
 │   │   │   ├── customerController.js
+│   │   │   ├── financeController.js
 │   │   │   ├── invoiceController.js
+│   │   │   ├── notificationController.js
 │   │   │   ├── packageController.js
 │   │   │   ├── paymentController.js
-│   │   │   └── routerController.js
+│   │   │   ├── routerController.js
+│   │   │   └── userController.js
 │   │   ├── middleware
 │   │   │   ├── authMiddleware.js
 │   │   │   └── roleMiddleware.js
 │   │   ├── routes
+│   │   │   ├── auditRoutes.js
 │   │   │   ├── authRoutes.js
 │   │   │   ├── customerRoutes.js
+│   │   │   ├── financeRoutes.js
 │   │   │   ├── invoiceRoutes.js
+│   │   │   ├── notificationRoutes.js
 │   │   │   ├── packageRoutes.js
 │   │   │   ├── paymentRoutes.js
-│   │   │   └── routerRoutes.js
+│   │   │   ├── routerRoutes.js
+│   │   │   └── userRoutes.js
 │   │   ├── services
+│   │   │   ├── auditService.js
 │   │   │   ├── authService.js
 │   │   │   ├── customerService.js
+│   │   │   ├── financeService.js
 │   │   │   ├── invoiceService.js
 │   │   │   ├── mikrotikService.js
+│   │   │   ├── notificationService.js
 │   │   │   ├── packageService.js
 │   │   │   ├── paymentService.js
 │   │   │   ├── routerService.js
-│   │   │   └── smsService.js
+│   │   │   ├── smsService.js
+│   │   │   └── userService.js
 │   │   ├── utils
 │   │   └── index.js
 │   ├── package.json
@@ -54,7 +68,9 @@
 ├── frontend
 │   ├── public
 │   │   ├── favicon.svg
-│   │   └── icons.svg
+│   │   ├── icons.svg
+│   │   ├── manifest.json
+│   │   └── _redirects
 │   ├── src
 │   │   ├── assets
 │   │   │   ├── hero.png
@@ -72,24 +88,37 @@
 │   │   │   ├── PackageForm.jsx
 │   │   │   ├── PaymentForm.jsx
 │   │   │   ├── ProtectedRoute.jsx
-│   │   │   └── RouterForm.jsx
+│   │   │   ├── RouterForm.jsx
+│   │   │   └── ThemeToggle.jsx
+│   │   ├── context
+│   │   │   └── ThemeContext.jsx
 │   │   ├── pages
+│   │   │   ├── AuditLogsPage.jsx
 │   │   │   ├── BillingPage.jsx
 │   │   │   ├── CustomersPage.jsx
 │   │   │   ├── DashboardPage.jsx
+│   │   │   ├── FinancePage.jsx
 │   │   │   ├── LiveStatusPage.jsx
+│   │   │   ├── NotificationsPage.jsx
 │   │   │   ├── PackagesPage.jsx
 │   │   │   ├── PaymentsPage.jsx
 │   │   │   ├── ReportsPage.jsx
-│   │   │   └── RoutersPage.jsx
+│   │   │   ├── RoutersPage.jsx
+│   │   │   ├── SettingsPage.jsx
+│   │   │   └── UsersPage.jsx
 │   │   ├── services
+│   │   │   ├── activityApi.js
 │   │   │   ├── api.js
+│   │   │   ├── auditApi.js
 │   │   │   ├── authApi.js
 │   │   │   ├── customerApi.js
+│   │   │   ├── financeApi.js
 │   │   │   ├── invoiceApi.js
+│   │   │   ├── notificationApi.js
 │   │   │   ├── packageApi.js
 │   │   │   ├── paymentApi.js
-│   │   │   └── routerApi.js
+│   │   │   ├── routerApi.js
+│   │   │   └── userApi.js
 │   │   ├── store
 │   │   │   └── authStore.js
 │   │   ├── utils
@@ -110,7 +139,7 @@
 ├── project_map.txt
 └── README.md
 
-24 directories, 84 files
+26 directories, 111 files
 
 =========================================
 2. COMPLETE FILE LIST (LOCATIONS)
@@ -118,34 +147,47 @@
 ./backend/package.json
 ./backend/package-lock.json
 ./backend/prisma/migrations/20260820100955_init_schema/migration.sql
+./backend/prisma/migrations/20260820162431_phase6_auxiliary/migration.sql
 ./backend/prisma/migrations/migration_lock.toml
 ./backend/prisma/schema.prisma
 ./backend/prisma/seed.js
 ./backend/skills-lock.json
 ./backend/src/config/db.js
+./backend/src/controllers/auditController.js
 ./backend/src/controllers/authController.js
 ./backend/src/controllers/customerController.js
+./backend/src/controllers/financeController.js
 ./backend/src/controllers/invoiceController.js
+./backend/src/controllers/notificationController.js
 ./backend/src/controllers/packageController.js
 ./backend/src/controllers/paymentController.js
 ./backend/src/controllers/routerController.js
+./backend/src/controllers/userController.js
 ./backend/src/index.js
 ./backend/src/middleware/authMiddleware.js
 ./backend/src/middleware/roleMiddleware.js
+./backend/src/routes/auditRoutes.js
 ./backend/src/routes/authRoutes.js
 ./backend/src/routes/customerRoutes.js
+./backend/src/routes/financeRoutes.js
 ./backend/src/routes/invoiceRoutes.js
+./backend/src/routes/notificationRoutes.js
 ./backend/src/routes/packageRoutes.js
 ./backend/src/routes/paymentRoutes.js
 ./backend/src/routes/routerRoutes.js
+./backend/src/routes/userRoutes.js
+./backend/src/services/auditService.js
 ./backend/src/services/authService.js
 ./backend/src/services/customerService.js
+./backend/src/services/financeService.js
 ./backend/src/services/invoiceService.js
 ./backend/src/services/mikrotikService.js
+./backend/src/services/notificationService.js
 ./backend/src/services/packageService.js
 ./backend/src/services/paymentService.js
 ./backend/src/services/routerService.js
 ./backend/src/services/smsService.js
+./backend/src/services/userService.js
 ./docs/MASTER_ARCHITECTURE.md
 ./docs/MASTER_BACKEND.md
 ./docs/MASTER_DATABASE.md
@@ -158,6 +200,8 @@
 ./frontend/postcss.config.js
 ./frontend/public/favicon.svg
 ./frontend/public/icons.svg
+./frontend/public/manifest.json
+./frontend/public/_redirects
 ./frontend/README.md
 ./frontend/src/App.css
 ./frontend/src/App.jsx
@@ -176,23 +220,35 @@
 ./frontend/src/components/PaymentForm.jsx
 ./frontend/src/components/ProtectedRoute.jsx
 ./frontend/src/components/RouterForm.jsx
+./frontend/src/components/ThemeToggle.jsx
+./frontend/src/context/ThemeContext.jsx
 ./frontend/src/index.css
 ./frontend/src/main.jsx
+./frontend/src/pages/AuditLogsPage.jsx
 ./frontend/src/pages/BillingPage.jsx
 ./frontend/src/pages/CustomersPage.jsx
 ./frontend/src/pages/DashboardPage.jsx
+./frontend/src/pages/FinancePage.jsx
 ./frontend/src/pages/LiveStatusPage.jsx
+./frontend/src/pages/NotificationsPage.jsx
 ./frontend/src/pages/PackagesPage.jsx
 ./frontend/src/pages/PaymentsPage.jsx
 ./frontend/src/pages/ReportsPage.jsx
 ./frontend/src/pages/RoutersPage.jsx
+./frontend/src/pages/SettingsPage.jsx
+./frontend/src/pages/UsersPage.jsx
+./frontend/src/services/activityApi.js
 ./frontend/src/services/api.js
+./frontend/src/services/auditApi.js
 ./frontend/src/services/authApi.js
 ./frontend/src/services/customerApi.js
+./frontend/src/services/financeApi.js
 ./frontend/src/services/invoiceApi.js
+./frontend/src/services/notificationApi.js
 ./frontend/src/services/packageApi.js
 ./frontend/src/services/paymentApi.js
 ./frontend/src/services/routerApi.js
+./frontend/src/services/userApi.js
 ./frontend/src/store/authStore.js
 ./frontend/tailwind.config.js
 ./frontend/vite.config.js
@@ -1974,6 +2030,90 @@ ALTER TABLE "Payment" ADD CONSTRAINT "Payment_receivedBy_fkey" FOREIGN KEY ("rec
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -------------------------------------------------------------------
+FILE: ./backend/prisma/migrations/20260820162431_phase6_auxiliary/migration.sql
+-------------------------------------------------------------------
+-- CreateTable
+CREATE TABLE "Staff" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "phone" TEXT,
+    "address" TEXT,
+    "joinDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "salary" DOUBLE PRECISION,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "Staff_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Income" (
+    "id" SERIAL NOT NULL,
+    "category" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "description" TEXT,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "recordedBy" INTEGER NOT NULL,
+
+    CONSTRAINT "Income_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Expense" (
+    "id" SERIAL NOT NULL,
+    "category" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "description" TEXT,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "recordedBy" INTEGER NOT NULL,
+    "billUrl" TEXT,
+
+    CONSTRAINT "Expense_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Notification" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "type" TEXT NOT NULL DEFAULT 'INFO',
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SystemSetting" (
+    "key" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SystemSetting_pkey" PRIMARY KEY ("key")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Staff_userId_key" ON "Staff"("userId");
+
+-- CreateIndex
+CREATE INDEX "Notification_userId_idx" ON "Notification"("userId");
+
+-- CreateIndex
+CREATE INDEX "Notification_isRead_idx" ON "Notification"("isRead");
+
+-- AddForeignKey
+ALTER TABLE "Staff" ADD CONSTRAINT "Staff_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Income" ADD CONSTRAINT "Income_recordedBy_fkey" FOREIGN KEY ("recordedBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Expense" ADD CONSTRAINT "Expense_recordedBy_fkey" FOREIGN KEY ("recordedBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-------------------------------------------------------------------
 FILE: ./backend/prisma/migrations/migration_lock.toml
 -------------------------------------------------------------------
 # Please do not edit this file manually
@@ -2003,6 +2143,10 @@ model User {
   updatedAt DateTime   @updatedAt
   auditLogs AuditLog[]
   payments  Payment[]
+  staff     Staff?
+  notifications Notification[]
+  incomes   Income[]
+  expenses  Expense[]
 }
 
 enum Role {
@@ -2143,8 +2287,8 @@ model Notification {
 }
 
 model SystemSetting {
-  key   String @id
-  value String
+  key       String   @id
+  value     String
   updatedAt DateTime @updatedAt
 }
 -------------------------------------------------------------------
@@ -2271,6 +2415,34 @@ const prisma = new PrismaClient({
 
 module.exports = prisma;
 -------------------------------------------------------------------
+FILE: ./backend/src/controllers/auditController.js
+-------------------------------------------------------------------
+const auditService = require('../services/auditService');
+
+class AuditController {
+  async getLogs(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const filters = { userId: req.query.userId, action: req.query.action, fromDate: req.query.fromDate, toDate: req.query.toDate };
+      const result = await auditService.getLogs(page, limit, filters);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+  async getStats(req, res) {
+    try {
+      const stats = await auditService.getStats();
+      return res.status(200).json({ success: true, data: stats });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+}
+
+module.exports = new AuditController();
+-------------------------------------------------------------------
 FILE: ./backend/src/controllers/authController.js
 -------------------------------------------------------------------
 const authService = require('../services/authService');
@@ -2379,6 +2551,52 @@ class CustomerController {
 
 module.exports = new CustomerController();
 -------------------------------------------------------------------
+FILE: ./backend/src/controllers/financeController.js
+-------------------------------------------------------------------
+const financeService = require('../services/financeService');
+
+class FinanceController {
+  async addIncome(req, res) {
+    try {
+      const income = await financeService.addIncome(req.body, req.user.id);
+      return res.status(201).json({ success: true, data: income });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  async addExpense(req, res) {
+    try {
+      const expense = await financeService.addExpense(req.body, req.user.id);
+      return res.status(201).json({ success: true, data: expense });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  async getTransactions(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const filters = { fromDate: req.query.fromDate, toDate: req.query.toDate, category: req.query.category };
+      const result = await financeService.getTransactions(page, limit, filters);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+  async getMonthlySummary(req, res) {
+    try {
+      const { month } = req.query;
+      if (!month) return res.status(400).json({ success: false, message: 'Month required' });
+      const summary = await financeService.getMonthlySummary(month);
+      return res.status(200).json({ success: true, data: summary });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+}
+
+module.exports = new FinanceController();
+-------------------------------------------------------------------
 FILE: ./backend/src/controllers/invoiceController.js
 -------------------------------------------------------------------
 const invoiceService = require('../services/invoiceService');
@@ -2439,6 +2657,49 @@ class InvoiceController {
 }
 
 module.exports = new InvoiceController();
+-------------------------------------------------------------------
+FILE: ./backend/src/controllers/notificationController.js
+-------------------------------------------------------------------
+const notificationService = require('../services/notificationService');
+
+class NotificationController {
+  async getUnreadCount(req, res) {
+    try {
+      const count = await notificationService.getUnreadCount(req.user.id);
+      return res.status(200).json({ success: true, data: { count } });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+  async getNotifications(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const result = await notificationService.getNotifications(req.user.id, page, limit);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+  async markAsRead(req, res) {
+    try {
+      await notificationService.markAsRead(req.params.id, req.user.id);
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  async markAllAsRead(req, res) {
+    try {
+      await notificationService.markAllAsRead(req.user.id);
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+}
+
+module.exports = new NotificationController();
 -------------------------------------------------------------------
 FILE: ./backend/src/controllers/packageController.js
 -------------------------------------------------------------------
@@ -2641,6 +2902,64 @@ class RouterController {
 
 module.exports = new RouterController();
 -------------------------------------------------------------------
+FILE: ./backend/src/controllers/userController.js
+-------------------------------------------------------------------
+const userService = require('../services/userService');
+
+class UserController {
+  async getAll(req, res) {
+    try {
+      const users = await userService.getAllUsers();
+      return res.status(200).json({ success: true, data: users });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+  async create(req, res) {
+    try {
+      const user = await userService.createUser(req.body, req.user.id);
+      return res.status(201).json({ success: true, data: user });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  async update(req, res) {
+    try {
+      const user = await userService.updateUser(req.params.id, req.body, req.user.id);
+      return res.status(200).json({ success: true, data: user });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  async delete(req, res) {
+    try {
+      await userService.deleteUser(req.params.id, req.user.id);
+      return res.status(200).json({ success: true, message: 'User deleted' });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  async changePassword(req, res) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      await userService.changePassword(req.user.id, currentPassword, newPassword);
+      return res.status(200).json({ success: true, message: 'Password changed' });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  async updateProfile(req, res) {
+    try {
+      const user = await userService.updateProfile(req.user.id, req.body);
+      return res.status(200).json({ success: true, data: user });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+}
+
+module.exports = new UserController();
+-------------------------------------------------------------------
 FILE: ./backend/src/index.js
 -------------------------------------------------------------------
 require('dotenv').config();
@@ -2657,19 +2976,27 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const routerRoutes = require('./routes/routerRoutes');
 
+// Phase 6: New auxiliary routes
+const userRoutes = require('./routes/userRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const financeRoutes = require('./routes/financeRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middleware ---
-app.use(helmet()); // Security headers
+app.use(helmet());
+
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? 'https://yourdomain.com' // Replace with your actual frontend domain in production
-    : 'http://localhost:5173', // Vite dev server
+    ? process.env.FRONTEND_URL || 'https://yourdomain.com'
+    : 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json()); // Parse JSON bodies
-app.use(morgan('dev')); // HTTP request logging
+
+app.use(express.json({ limit: '10mb' }));
+app.use(morgan('dev'));
 
 // --- Routes ---
 app.use('/api/auth', authRoutes);
@@ -2679,12 +3006,19 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/routers', routerRoutes);
 
+// Phase 6: Register new auxiliary routes
+app.use('/api/users', userRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 // --- Health Check ---
 app.get('/api/health', (req, res) => {
   res.json({ 
     success: true, 
     message: 'ISP Billing API is running', 
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
@@ -2748,6 +3082,20 @@ const roleMiddleware = (...allowedRoles) => {
 
 module.exports = roleMiddleware;
 -------------------------------------------------------------------
+FILE: ./backend/src/routes/auditRoutes.js
+-------------------------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const auditController = require('../controllers/auditController');
+const authMiddleware = require('../middleware/authMiddleware');
+const roleMiddleware = require('../middleware/roleMiddleware');
+
+router.use(authMiddleware);
+router.get('/', roleMiddleware('ADMIN', 'MANAGER'), auditController.getLogs);
+router.get('/stats', roleMiddleware('ADMIN', 'MANAGER'), auditController.getStats);
+
+module.exports = router;
+-------------------------------------------------------------------
 FILE: ./backend/src/routes/authRoutes.js
 -------------------------------------------------------------------
 const express = require('express');
@@ -2797,6 +3145,21 @@ router.post('/:id/restore', roleMiddleware('ADMIN', 'MANAGER'), customerControll
 
 module.exports = router;
 -------------------------------------------------------------------
+FILE: ./backend/src/routes/financeRoutes.js
+-------------------------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const financeController = require('../controllers/financeController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+router.use(authMiddleware);
+router.get('/transactions', financeController.getTransactions);
+router.get('/monthly-summary', financeController.getMonthlySummary);
+router.post('/income', financeController.addIncome);
+router.post('/expense', financeController.addExpense);
+
+module.exports = router;
+-------------------------------------------------------------------
 FILE: ./backend/src/routes/invoiceRoutes.js
 -------------------------------------------------------------------
 const express = require('express');
@@ -2811,6 +3174,21 @@ router.get('/', invoiceController.getAll);
 router.get('/summary', invoiceController.getMonthlySummary);
 router.get('/:id', invoiceController.getById);
 router.post('/generate', roleMiddleware('ADMIN', 'MANAGER'), invoiceController.generate);
+
+module.exports = router;
+-------------------------------------------------------------------
+FILE: ./backend/src/routes/notificationRoutes.js
+-------------------------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const notificationController = require('../controllers/notificationController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+router.use(authMiddleware);
+router.get('/unread-count', notificationController.getUnreadCount);
+router.get('/', notificationController.getNotifications);
+router.post('/:id/read', notificationController.markAsRead);
+router.post('/mark-all-read', notificationController.markAllAsRead);
 
 module.exports = router;
 -------------------------------------------------------------------
@@ -2878,6 +3256,74 @@ router.post('/bulk/suspend', roleMiddleware('ADMIN', 'MANAGER'), routerControlle
 router.post('/bulk/restore', roleMiddleware('ADMIN', 'MANAGER'), routerController.bulkRestore);
 
 module.exports = router;
+-------------------------------------------------------------------
+FILE: ./backend/src/routes/userRoutes.js
+-------------------------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const userController = require('../controllers/userController');
+const authMiddleware = require('../middleware/authMiddleware');
+const roleMiddleware = require('../middleware/roleMiddleware');
+
+router.use(authMiddleware);
+router.get('/', roleMiddleware('ADMIN'), userController.getAll);
+router.post('/', roleMiddleware('ADMIN'), userController.create);
+router.put('/:id', roleMiddleware('ADMIN'), userController.update);
+router.delete('/:id', roleMiddleware('ADMIN'), userController.delete);
+router.post('/change-password', userController.changePassword);
+router.put('/profile/me', userController.updateProfile);
+
+module.exports = router;
+-------------------------------------------------------------------
+FILE: ./backend/src/services/auditService.js
+-------------------------------------------------------------------
+const prisma = require('../config/db');
+
+class AuditService {
+  async getLogs(page = 1, limit = 50, filters = {}) {
+    const skip = (page - 1) * limit;
+    const where = {};
+
+    if (filters.userId) where.userId = parseInt(filters.userId);
+    if (filters.action) where.action = { contains: filters.action, mode: 'insensitive' };
+    if (filters.fromDate || filters.toDate) {
+      where.createdAt = {};
+      if (filters.fromDate) where.createdAt.gte = new Date(filters.fromDate);
+      if (filters.toDate) where.createdAt.lte = new Date(filters.toDate);
+    }
+
+    const [logs, total] = await prisma.$transaction([
+      prisma.auditLog.findMany({
+        where,
+        skip,
+        take: limit,
+        include: { user: { select: { id: true, username: true, fullName: true, role: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
+
+    return { logs, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+
+  async getStats() {
+    const total = await prisma.auditLog.count();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = await prisma.auditLog.count({ where: { createdAt: { gte: today } } });
+
+    const actionCounts = await prisma.auditLog.groupBy({
+      by: ['action'],
+      _count: { _all: true },
+      orderBy: { _count: { _all: 'desc' } },
+      take: 10,
+    });
+
+    return { total, todayCount, topActions: actionCounts };
+  }
+}
+
+module.exports = new AuditService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/authService.js
 -------------------------------------------------------------------
@@ -3264,6 +3710,111 @@ class CustomerService {
 
 module.exports = new CustomerService();
 -------------------------------------------------------------------
+FILE: ./backend/src/services/financeService.js
+-------------------------------------------------------------------
+const prisma = require('../config/db');
+
+class FinanceService {
+  async addIncome(data, userId) {
+    const income = await prisma.income.create({
+      data: {
+        category: data.category,
+        amount: parseFloat(data.amount),
+        description: data.description,
+        date: data.date ? new Date(data.date) : new Date(),
+        recordedBy: userId,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: { userId, action: 'ADD_INCOME', details: JSON.stringify({ incomeId: income.id, amount: income.amount, category: income.category }) },
+    });
+
+    return income;
+  }
+
+  async addExpense(data, userId) {
+    const expense = await prisma.expense.create({
+      data: {
+        category: data.category,
+        amount: parseFloat(data.amount),
+        description: data.description,
+        date: data.date ? new Date(data.date) : new Date(),
+        recordedBy: userId,
+        billUrl: data.billUrl,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: { userId, action: 'ADD_EXPENSE', details: JSON.stringify({ expenseId: expense.id, amount: expense.amount, category: expense.category }) },
+    });
+
+    return expense;
+  }
+
+  async getTransactions(page = 1, limit = 20, filters = {}) {
+    const skip = (page - 1) * limit;
+    const where = {};
+
+    if (filters.fromDate || filters.toDate) {
+      where.date = {};
+      if (filters.fromDate) where.date.gte = new Date(filters.fromDate);
+      if (filters.toDate) where.date.lte = new Date(filters.toDate);
+    }
+    if (filters.category) where.category = filters.category;
+
+    const [incomes, expenses] = await Promise.all([
+      prisma.income.findMany({ where, skip, take: limit, include: { recorder: { select: { fullName: true } } }, orderBy: { date: 'desc' } }),
+      prisma.expense.findMany({ where, skip, take: limit, include: { recorder: { select: { fullName: true } } }, orderBy: { date: 'desc' } }),
+    ]);
+
+    const allTransactions = [
+      ...incomes.map(i => ({ ...i, type: 'INCOME' })),
+      ...expenses.map(e => ({ ...e, type: 'EXPENSE' })),
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
+    const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+    return {
+      transactions: allTransactions.slice(0, limit),
+      summary: { totalIncome, totalExpense, net: totalIncome - totalExpense },
+      pagination: { page, limit },
+    };
+  }
+
+  async getMonthlySummary(month) {
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0, 23, 59, 59);
+
+    const [incomes, expenses, payments] = await Promise.all([
+      prisma.income.aggregate({ where: { date: { gte: startDate, lte: endDate } }, _sum: { amount: true }, _count: { _all: true } }),
+      prisma.expense.aggregate({ where: { date: { gte: startDate, lte: endDate } }, _sum: { amount: true }, _count: { _all: true } }),
+      prisma.payment.aggregate({ where: { date: { gte: startDate, lte: endDate } }, _sum: { amount: true }, _count: { _all: true } }),
+    ]);
+
+    const customerPayments = payments._sum.amount || 0;
+    const otherIncome = incomes._sum.amount || 0;
+    const totalExpense = expenses._sum.amount || 0;
+    const totalIncome = customerPayments + otherIncome;
+
+    return {
+      month,
+      customerPayments,
+      otherIncome,
+      totalIncome,
+      totalExpense,
+      netProfit: totalIncome - totalExpense,
+      paymentCount: payments._count._all,
+      incomeCount: incomes._count._all,
+      expenseCount: expenses._count._all,
+    };
+  }
+}
+
+module.exports = new FinanceService();
+-------------------------------------------------------------------
 FILE: ./backend/src/services/invoiceService.js
 -------------------------------------------------------------------
 const prisma = require('../config/db');
@@ -3470,17 +4021,27 @@ const path = require('path');
 
 class MikroTikService {
   constructor() {
+    // Initialize from env, but can be changed at runtime
     this.mockMode = process.env.MIKROTIK_MOCK_MODE === 'true';
     this.logFile = path.join(__dirname, '../../logs/mikrotik-operations.log');
-    
-    // Ensure logs directory exists
     fs.mkdir(path.dirname(this.logFile), { recursive: true }).catch(() => {});
   }
 
+  // --- Mock Mode Toggling ---
+  setMockMode(isMock) {
+    this.mockMode = isMock;
+    console.log(`[MikroTik Service] Mock Mode set to: ${this.mockMode}`);
+    return this.mockMode;
+  }
+
+  getMockMode() {
+    return this.mockMode;
+  }
+
+  // --- Logging ---
   async log(operation, params, result) {
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ${operation} | Params: ${JSON.stringify(params)} | Result: ${JSON.stringify(result)}\n`;
-    
     try {
       await fs.appendFile(this.logFile, logEntry);
     } catch (error) {
@@ -3488,59 +4049,57 @@ class MikroTikService {
     }
   }
 
-  async connect(router) {
-    if (this.mockMode) {
-      console.log(`[MOCK] Connecting to router ${router.name} (${router.ipAddress})`);
-      return { mock: true, router };
-    }
+  // --- Connection Helper ---
+  async connectToRouter(router) {
+    if (this.mockMode) return { mock: true, router };
 
-    const connector = new RouterOSAPI.RouterOSAPI();
-    const connection = await connector.connect({
-      host: router.ipAddress,
-      user: router.username,
-      password: router.password,
-      port: router.apiPort || 8728,
-    });
+    try {
+      const api = new RouterOSAPI({
+        host: router.ipAddress,
+        user: router.username,
+        password: router.password,
+        port: router.apiPort || 8728,
+        timeout: 5000,
+      });
 
-    return connection;
-  }
-
-  async disconnect(connection) {
-    if (this.mockMode) {
-      console.log('[MOCK] Disconnecting from router');
-      return;
-    }
-
-    if (connection && connection.close) {
-      connection.close();
+      await api.connect();
+      return api;
+    } catch (error) {
+      throw new Error(`Connection failed: ${error.message}`);
     }
   }
+
+  async disconnect(api) {
+    if (!this.mockMode && api && api.close) {
+      try { api.close(); } catch (e) { /* ignore close errors */ }
+    }
+  }
+
+  // --- CRUD Operations ---
 
   async addPppoeSecret(router, username, password, profile) {
-    const params = { username, password, profile };
+    const params = { username, password, profile, router: router.name };
     
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE secret created' };
       await this.log('ADD_PPPOE_SECRET', params, result);
-      console.log(`[MOCK] Added PPPoE secret: ${username}`);
+      console.log(`[MOCK] Added PPPoE: ${username}`);
       return result;
     }
 
     try {
-      const connection = await this.connect(router);
-      const api = connection;
+      const api = await this.connectToRouter(router);
+      await api.write('/ppp/secret/add', [
+        `=name=${username}`,
+        `=password=${password}`,
+        '=service=pppoe',
+        `=profile=${profile}`,
+      ]);
+      await this.disconnect(api);
       
-      const result = await api.write('/ppp/secret/add', {
-        name: username,
-        password: password,
-        service: 'pppoe',
-        profile: profile,
-      });
-
-      await this.disconnect(connection);
+      const result = { success: true };
       await this.log('ADD_PPPOE_SECRET', params, result);
-      
-      return { success: true, data: result };
+      return result;
     } catch (error) {
       await this.log('ADD_PPPOE_SECRET', params, { error: error.message });
       throw new Error(`Failed to add PPPoE secret: ${error.message}`);
@@ -3548,129 +4107,200 @@ class MikroTikService {
   }
 
   async disablePppoeSecret(router, username) {
-    const params = { username };
+    const params = { username, router: router.name };
     
     if (this.mockMode) {
-      const result = { success: true, message: 'Mock: PPPoE secret disabled' };
+      const result = { success: true, message: 'Mock: PPPoE disabled' };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
-      console.log(`[MOCK] Disabled PPPoE secret: ${username}`);
       return result;
     }
 
     try {
-      const connection = await this.connect(router);
-      const api = connection;
+      const api = await this.connectToRouter(router);
+      const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
       
-      // First, find the secret by username
-      const secrets = await api.write('/ppp/secret/print', {
-        '?name': username,
-      });
+      if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
+      
+      await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=yes']);
+      await this.disconnect(api);
 
-      if (secrets.length === 0) {
-        throw new Error(`PPPoE secret not found: ${username}`);
-      }
-
-      const secretId = secrets[0]['.id'];
-
-      // Disable the secret
-      const result = await api.write('/ppp/secret/set', {
-        '.id': secretId,
-        'disabled': 'yes',
-      });
-
-      await this.disconnect(connection);
+      const result = { success: true };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
-      
-      return { success: true, data: result };
+      return result;
     } catch (error) {
       await this.log('DISABLE_PPPOE_SECRET', params, { error: error.message });
-      throw new Error(`Failed to disable PPPoE secret: ${error.message}`);
+      throw new Error(`Failed to disable PPPoE: ${error.message}`);
     }
   }
 
   async enablePppoeSecret(router, username) {
-    const params = { username };
+    const params = { username, router: router.name };
     
     if (this.mockMode) {
-      const result = { success: true, message: 'Mock: PPPoE secret enabled' };
+      const result = { success: true, message: 'Mock: PPPoE enabled' };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
-      console.log(`[MOCK] Enabled PPPoE secret: ${username}`);
       return result;
     }
 
     try {
-      const connection = await this.connect(router);
-      const api = connection;
+      const api = await this.connectToRouter(router);
+      const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
       
-      // Find the secret
-      const secrets = await api.write('/ppp/secret/print', {
-        '?name': username,
-      });
+      if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
+      
+      await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=no']);
+      await this.disconnect(api);
 
-      if (secrets.length === 0) {
-        throw new Error(`PPPoE secret not found: ${username}`);
-      }
-
-      const secretId = secrets[0]['.id'];
-
-      // Enable the secret
-      const result = await api.write('/ppp/secret/set', {
-        '.id': secretId,
-        'disabled': 'no',
-      });
-
-      await this.disconnect(connection);
+      const result = { success: true };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
-      
-      return { success: true, data: result };
+      return result;
     } catch (error) {
       await this.log('ENABLE_PPPOE_SECRET', params, { error: error.message });
-      throw new Error(`Failed to enable PPPoE secret: ${error.message}`);
+      throw new Error(`Failed to enable PPPoE: ${error.message}`);
     }
   }
 
   async removePppoeSecret(router, username) {
-    const params = { username };
+    const params = { username, router: router.name };
     
     if (this.mockMode) {
-      const result = { success: true, message: 'Mock: PPPoE secret removed' };
+      const result = { success: true, message: 'Mock: PPPoE removed' };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
-      console.log(`[MOCK] Removed PPPoE secret: ${username}`);
       return result;
     }
 
     try {
-      const connection = await this.connect(router);
-      const api = connection;
+      const api = await this.connectToRouter(router);
+      const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
       
-      // Find the secret
-      const secrets = await api.write('/ppp/secret/print', {
-        '?name': username,
-      });
+      if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
+      
+      await api.write('/ppp/secret/remove', [`.id=${secrets[0]['.id']}`]);
+      await this.disconnect(api);
 
-      if (secrets.length === 0) {
-        throw new Error(`PPPoE secret not found: ${username}`);
-      }
-
-      const secretId = secrets[0]['.id'];
-
-      // Remove the secret
-      const result = await api.write('/ppp/secret/remove', {
-        '.id': secretId,
-      });
-
-      await this.disconnect(connection);
+      const result = { success: true };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
-      
-      return { success: true, data: result };
+      return result;
     } catch (error) {
       await this.log('REMOVE_PPPOE_SECRET', params, { error: error.message });
-      throw new Error(`Failed to remove PPPoE secret: ${error.message}`);
+      throw new Error(`Failed to remove PPPoE: ${error.message}`);
+    }
+  }
+
+  // --- Real World Features ---
+
+  async testConnection(router) {
+    if (this.mockMode) {
+      return {
+        success: true,
+        mock: true,
+        message: 'Mock Mode Active',
+        data: { identity: `${router.name} (Mock)`, version: '7.15 (Mock)', uptime: 'N/A' }
+      };
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      
+      // Fetch Identity
+      const identity = await api.write('/system/identity/print');
+      // Fetch Resource (Version/Uptime)
+      const resource = await api.write('/system/resource/print');
+      
+      await this.disconnect(api);
+
+      return {
+        success: true,
+        mock: false,
+        message: 'Connection successful',
+        data: {
+          identity: identity[0]?.name || 'Unknown',
+          version: resource[0]?.version || 'Unknown',
+          uptime: resource[0]?.uptime || 'Unknown',
+          freeMemory: resource[0]?.['free-memory'] || 'Unknown',
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        mock: false,
+        message: `Connection failed: ${error.message}`,
+        data: null
+      };
+    }
+  }
+
+  async getActiveSessions() {
+    if (this.mockMode) {
+      return []; // Return empty or mock data if needed
+    }
+
+    // Note: To get ALL active sessions, we need to query ALL routers.
+    // This method expects an array of routers to query.
+    // For simplicity in this service, we will query a specific router if passed, 
+    // or we can handle it in routerService.
+    return []; 
+  }
+
+  async getRouterActiveSessions(router) {
+    if (this.mockMode) return [];
+
+    try {
+      const api = await this.connectToRouter(router);
+      const sessions = await api.write('/ppp/active/print');
+      await this.disconnect(api);
+      
+      // sessions is an array of objects: [{'.id': '...', 'name': 'user1', 'address': '10.0.0.1', 'uptime': '00:10:00', ...}]
+      return sessions.map(s => ({
+        id: s['.id'],
+        username: s.name,
+        address: s.address,
+        uptime: s.uptime,
+        routerName: router.name,
+        routerId: router.id
+      }));
+    } catch (error) {
+      console.error(`Failed to get sessions from ${router.name}:`, error.message);
+      return [];
     }
   }
 }
 
 module.exports = new MikroTikService();
+-------------------------------------------------------------------
+FILE: ./backend/src/services/notificationService.js
+-------------------------------------------------------------------
+const prisma = require('../config/db');
+
+class NotificationService {
+  async createNotification(userId, title, message, type = 'INFO') {
+    return await prisma.notification.create({ data: { userId, title, message, type } });
+  }
+
+  async getUnreadCount(userId) {
+    return await prisma.notification.count({ where: { userId, isRead: false } });
+  }
+
+  async getNotifications(userId, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [notifications, total] = await prisma.$transaction([
+      prisma.notification.findMany({ where: { userId }, skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      prisma.notification.count({ where: { userId } }),
+    ]);
+
+    return { notifications, pagination: { page, limit, total } };
+  }
+
+  async markAsRead(id, userId) {
+    return await prisma.notification.updateMany({ where: { id: parseInt(id), userId }, data: { isRead: true } });
+  }
+
+  async markAllAsRead(userId) {
+    return await prisma.notification.updateMany({ where: { userId, isRead: false }, data: { isRead: true } });
+  }
+}
+
+module.exports = new NotificationService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/packageService.js
 -------------------------------------------------------------------
@@ -3797,15 +4427,19 @@ module.exports = new PackageService();
 FILE: ./backend/src/services/paymentService.js
 -------------------------------------------------------------------
 const prisma = require('../config/db');
+const mikrotikService = require('./mikrotikService'); // <-- ADDED: Required for auto-restore
 
 class PaymentService {
   async recordPayment(data, userId) {
     const { invoiceId, amount, method, notes } = data;
 
-    // Validate invoice exists
+    // Validate invoice exists (Include router details for auto-restore)
     const invoice = await prisma.invoice.findUnique({
       where: { id: parseInt(invoiceId) },
-      include: { payments: true, customer: true },
+      include: { 
+        payments: true, 
+        customer: { include: { router: true } } // <-- ADDED: Need router details
+      },
     });
 
     if (!invoice) throw new Error('Invoice not found');
@@ -3847,12 +4481,25 @@ class PaymentService {
         data: { status: newStatus },
       });
 
-      // If fully paid and customer was suspended, restore them
+      // FIX #4: If fully paid and customer was suspended, restore them AND enable MikroTik
       if (newStatus === 'PAID' && invoice.customer.status === 'SUSPENDED') {
         await tx.customer.update({
           where: { id: invoice.customer.id },
           data: { status: 'ACTIVE' },
         });
+
+        // Call MikroTik to enable PPPoE
+        if (invoice.customer.routerId && invoice.customer.router) {
+          try {
+            await mikrotikService.enablePppoeSecret(
+              invoice.customer.router,
+              invoice.customer.pppoeUsername
+            );
+          } catch (error) {
+            console.error('Failed to enable PPPoE on auto-restore:', error);
+            // We don't throw here to avoid rolling back the successful payment
+          }
+        }
       }
 
       return payment;
@@ -4365,6 +5012,124 @@ class SmsService {
 
 module.exports = new SmsService();
 -------------------------------------------------------------------
+FILE: ./backend/src/services/userService.js
+-------------------------------------------------------------------
+const prisma = require('../config/db');
+const bcrypt = require('bcryptjs');
+
+class UserService {
+  async getAllUsers() {
+    return await prisma.user.findMany({
+      include: { staff: true, _count: { select: { auditLogs: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createUser(data, createdBy) {
+    const existing = await prisma.user.findUnique({ where: { username: data.username } });
+    if (existing) throw new Error('Username already exists');
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const user = await prisma.user.create({
+      data: {
+        username: data.username,
+        password: hashedPassword,
+        fullName: data.fullName,
+        role: data.role || 'STAFF',
+        isActive: true,
+      },
+    });
+
+    if (data.phone || data.address || data.salary) {
+      await prisma.staff.create({
+        data: {
+          userId: user.id,
+          phone: data.phone,
+          address: data.address,
+          salary: data.salary ? parseFloat(data.salary) : null,
+        },
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: { userId: createdBy, action: 'CREATE_USER', details: JSON.stringify({ userId: user.id, username: user.username, role: user.role }) },
+    });
+
+    return user;
+  }
+
+  async updateUser(id, data, updatedBy) {
+    const updateData = {};
+    if (data.fullName) updateData.fullName = data.fullName;
+    if (data.role) updateData.role = data.role;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.password) updateData.password = await bcrypt.hash(data.password, 10);
+
+    const user = await prisma.user.update({ where: { id: parseInt(id) }, data: updateData });
+
+    if (data.phone !== undefined || data.address !== undefined || data.salary !== undefined) {
+      await prisma.staff.upsert({
+        where: { userId: user.id },
+        update: { phone: data.phone, address: data.address, salary: data.salary ? parseFloat(data.salary) : null },
+        create: { userId: user.id, phone: data.phone, address: data.address, salary: data.salary ? parseFloat(data.salary) : null },
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: { userId: updatedBy, action: 'UPDATE_USER', details: JSON.stringify({ userId: user.id, changes: Object.keys(updateData) }) },
+    });
+
+    return user;
+  }
+
+  async deleteUser(id, deletedBy) {
+    if (id === deletedBy) throw new Error('Cannot delete your own account');
+    await prisma.user.delete({ where: { id: parseInt(id) } });
+
+    await prisma.auditLog.create({
+      data: { userId: deletedBy, action: 'DELETE_USER', details: JSON.stringify({ userId: id }) },
+    });
+
+    return { success: true };
+  }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('User not found');
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) throw new Error('Current password is incorrect');
+    if (newPassword.length < 6) throw new Error('New password must be at least 6 characters');
+
+    await prisma.user.update({ where: { id: userId }, data: { password: await bcrypt.hash(newPassword, 10) } });
+
+    await prisma.auditLog.create({
+      data: { userId, action: 'CHANGE_PASSWORD', details: JSON.stringify({ userId }) },
+    });
+
+    return { success: true };
+  }
+
+  async updateProfile(userId, data) {
+    const updateData = {};
+    if (data.fullName) updateData.fullName = data.fullName;
+
+    const user = await prisma.user.update({ where: { id: userId }, data: updateData });
+
+    if (data.phone !== undefined || data.address !== undefined) {
+      await prisma.staff.upsert({
+        where: { userId },
+        update: { phone: data.phone, address: data.address },
+        create: { userId, phone: data.phone, address: data.address },
+      });
+    }
+
+    return user;
+  }
+}
+
+module.exports = new UserService();
+-------------------------------------------------------------------
 FILE: ./docs/MASTER_ARCHITECTURE.md
 -------------------------------------------------------------------
 # MASTER ARCHITECTURE DOCUMENT
@@ -4545,6 +5310,57 @@ All wrapped in try/catch. Router unreachable = log error, don't crash.
 | GET | /api/payments | JWT | List payments |
 | GET | /api/payments/daily | JWT | Daily collection |
 | POST | /api/payments | JWT | Record payment |
+
+## 10. Router Management (Phase 5)
+
+### RouterService
+- `getAllRouters()` - List all routers with customer counts
+- `createRouter(data, userId)` - Add new MikroTik router
+- `updateRouter(id, data, userId)` - Update router config
+- `deleteRouter(id, userId)` - Delete (only if no customers assigned)
+- `testConnection(id)` - Test API connectivity to router
+- `getLiveStatus()` - Get real-time online/offline status
+- `bulkSuspend(customerIds, userId)` - Suspend multiple customers
+- `bulkRestore(customerIds, userId)` - Restore multiple customers
+
+### New API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/routers | JWT | List routers |
+| GET | /api/routers/live-status | JWT | Live customer status |
+| GET | /api/routers/:id | JWT | Router details |
+| POST | /api/routers | JWT+ADMIN | Add router |
+| PUT | /api/routers/:id | JWT+ADMIN | Update router |
+| DELETE | /api/routers/:id | JWT+ADMIN | Delete router |
+| POST | /api/routers/:id/test | JWT | Test connection |
+| POST | /api/routers/bulk/suspend | JWT+ADMIN | Bulk suspend |
+| POST | /api/routers/bulk/restore | JWT+ADMIN | Bulk restore |
+
+## 11. Phase 6 Services
+- UserService: CRUD, password change, profile update
+- AuditService: Log retrieval with filters and stats
+- FinanceService: Income/expense tracking, monthly summaries
+- NotificationService: In-app notifications
+
+## 12. New Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/users | JWT+ADMIN | List users |
+| POST | /api/users | JWT+ADMIN | Create user |
+| PUT | /api/users/:id | JWT+ADMIN | Update user |
+| DELETE | /api/users/:id | JWT+ADMIN | Delete user |
+| POST | /api/users/change-password | JWT | Change password |
+| PUT | /api/users/profile/me | JWT | Update own profile |
+| GET | /api/audit | JWT+ADMIN/MANAGER | Audit logs |
+| GET | /api/audit/stats | JWT+ADMIN/MANAGER | Audit stats |
+| GET | /api/finance/transactions | JWT | Finance transactions |
+| GET | /api/finance/monthly-summary | JWT | Monthly summary |
+| POST | /api/finance/income | JWT | Add income |
+| POST | /api/finance/expense | JWT | Add expense |
+| GET | /api/notifications | JWT | User notifications |
+| GET | /api/notifications/unread-count | JWT | Unread count |
+| POST | /api/notifications/:id/read | JWT | Mark as read |
+| POST | /api/notifications/mark-all-read | JWT | Mark all read |
 -------------------------------------------------------------------
 FILE: ./docs/MASTER_DATABASE.md
 -------------------------------------------------------------------
@@ -4696,34 +5512,47 @@ FILE: ./file_list.tmp
 ./backend/package.json
 ./backend/package-lock.json
 ./backend/prisma/migrations/20260820100955_init_schema/migration.sql
+./backend/prisma/migrations/20260820162431_phase6_auxiliary/migration.sql
 ./backend/prisma/migrations/migration_lock.toml
 ./backend/prisma/schema.prisma
 ./backend/prisma/seed.js
 ./backend/skills-lock.json
 ./backend/src/config/db.js
+./backend/src/controllers/auditController.js
 ./backend/src/controllers/authController.js
 ./backend/src/controllers/customerController.js
+./backend/src/controllers/financeController.js
 ./backend/src/controllers/invoiceController.js
+./backend/src/controllers/notificationController.js
 ./backend/src/controllers/packageController.js
 ./backend/src/controllers/paymentController.js
 ./backend/src/controllers/routerController.js
+./backend/src/controllers/userController.js
 ./backend/src/index.js
 ./backend/src/middleware/authMiddleware.js
 ./backend/src/middleware/roleMiddleware.js
+./backend/src/routes/auditRoutes.js
 ./backend/src/routes/authRoutes.js
 ./backend/src/routes/customerRoutes.js
+./backend/src/routes/financeRoutes.js
 ./backend/src/routes/invoiceRoutes.js
+./backend/src/routes/notificationRoutes.js
 ./backend/src/routes/packageRoutes.js
 ./backend/src/routes/paymentRoutes.js
 ./backend/src/routes/routerRoutes.js
+./backend/src/routes/userRoutes.js
+./backend/src/services/auditService.js
 ./backend/src/services/authService.js
 ./backend/src/services/customerService.js
+./backend/src/services/financeService.js
 ./backend/src/services/invoiceService.js
 ./backend/src/services/mikrotikService.js
+./backend/src/services/notificationService.js
 ./backend/src/services/packageService.js
 ./backend/src/services/paymentService.js
 ./backend/src/services/routerService.js
 ./backend/src/services/smsService.js
+./backend/src/services/userService.js
 ./docs/MASTER_ARCHITECTURE.md
 ./docs/MASTER_BACKEND.md
 ./docs/MASTER_DATABASE.md
@@ -4736,6 +5565,8 @@ FILE: ./file_list.tmp
 ./frontend/postcss.config.js
 ./frontend/public/favicon.svg
 ./frontend/public/icons.svg
+./frontend/public/manifest.json
+./frontend/public/_redirects
 ./frontend/README.md
 ./frontend/src/App.css
 ./frontend/src/App.jsx
@@ -4754,23 +5585,35 @@ FILE: ./file_list.tmp
 ./frontend/src/components/PaymentForm.jsx
 ./frontend/src/components/ProtectedRoute.jsx
 ./frontend/src/components/RouterForm.jsx
+./frontend/src/components/ThemeToggle.jsx
+./frontend/src/context/ThemeContext.jsx
 ./frontend/src/index.css
 ./frontend/src/main.jsx
+./frontend/src/pages/AuditLogsPage.jsx
 ./frontend/src/pages/BillingPage.jsx
 ./frontend/src/pages/CustomersPage.jsx
 ./frontend/src/pages/DashboardPage.jsx
+./frontend/src/pages/FinancePage.jsx
 ./frontend/src/pages/LiveStatusPage.jsx
+./frontend/src/pages/NotificationsPage.jsx
 ./frontend/src/pages/PackagesPage.jsx
 ./frontend/src/pages/PaymentsPage.jsx
 ./frontend/src/pages/ReportsPage.jsx
 ./frontend/src/pages/RoutersPage.jsx
+./frontend/src/pages/SettingsPage.jsx
+./frontend/src/pages/UsersPage.jsx
+./frontend/src/services/activityApi.js
 ./frontend/src/services/api.js
+./frontend/src/services/auditApi.js
 ./frontend/src/services/authApi.js
 ./frontend/src/services/customerApi.js
+./frontend/src/services/financeApi.js
 ./frontend/src/services/invoiceApi.js
+./frontend/src/services/notificationApi.js
 ./frontend/src/services/packageApi.js
 ./frontend/src/services/paymentApi.js
 ./frontend/src/services/routerApi.js
+./frontend/src/services/userApi.js
 ./frontend/src/store/authStore.js
 ./frontend/tailwind.config.js
 ./frontend/vite.config.js
@@ -4808,18 +5651,40 @@ FILE: ./frontend/index.html
 -------------------------------------------------------------------
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Primary Meta Tags -->
+  <title>ISP Billing & Management System - Professional ISP Solutions</title>
+  <meta name="title" content="ISP Billing & Management System - Professional ISP Solutions" />
+  <meta name="description" content="Enterprise-grade ISP billing and network management system. Automated billing, MikroTik integration, customer management, and real-time monitoring for internet service providers." />
+  <meta name="keywords" content="ISP billing, network management, MikroTik, PPPoE, automated billing, customer management, internet service provider, bandwidth management" />
+  <meta name="author" content="ISP Billing System" />
+  <meta name="robots" content="index, follow" />
+  <meta name="language" content="English" />
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1e293b" media="(prefers-color-scheme: dark)" />
+  
+  <!-- Additional Meta -->
+  <meta name="application-name" content="ISP Billing System" />
+  <meta name="msapplication-TileColor" content="#2563eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ISP Billing" />
+  
+  <title>ISP Billing System</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
 </html>
-
 -------------------------------------------------------------------
 FILE: ./frontend/package.json
 -------------------------------------------------------------------
@@ -9121,7 +9986,19 @@ export default {
 -------------------------------------------------------------------
 FILE: ./frontend/public/favicon.svg
 -------------------------------------------------------------------
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="46" fill="none" viewBox="0 0 48 46"><path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" style="fill:#863bff;fill:color(display-p3 .5252 .23 1);fill-opacity:1"/><mask id="a" width="48" height="46" x="0" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M25.842 44.938c-.664.844-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.183c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.498 0-3.579-1.842-3.579H1.133c-.92 0-1.456-1.04-.92-1.787L9.91.473c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.578 1.842 3.578h11.377c.943 0 1.473 1.088.89 1.832L25.843 44.94z" style="fill:#000;fill-opacity:1"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#ede6ff" rx="5.508" ry="14.704" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -4.47 31.516)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#ede6ff" rx="10.399" ry="29.851" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -39.328 7.883)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#7e14ff" rx="5.508" ry="30.487" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -25.913 -14.639)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -32.644 -3.334)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -34.34 30.47)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#ede6ff" rx="14.072" ry="22.078" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="rotate(93.35 24.506 48.493)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx=".387" cy="8.972" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(39.51 .387 8.972)"/></g><g filter="url(#k)"><ellipse cx="47.523" cy="-6.092" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 47.523 -6.092)"/></g><g filter="url(#l)"><ellipse cx="41.412" cy="6.333" fill="#47bfff" rx="5.971" ry="9.665" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 41.412 6.333)"/></g><g filter="url(#m)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#n)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#o)"><ellipse cx="35.651" cy="29.907" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 35.651 29.907)"/></g><g filter="url(#p)"><ellipse cx="38.418" cy="32.4" fill="#47bfff" rx="5.971" ry="15.297" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 38.418 32.4)"/></g></g><defs><filter id="b" width="60.045" height="41.654" x="-19.77" y="16.149" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-54.613" y="-7.533" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-49.64" y="2.03" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-45.045" y="20.029" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-43.513" y="21.178" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="15.756" y="-17.901" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-27.636" y="-22.853" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="20.116" y="-38.415" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="24.641" y="-11.323" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="8.244" y="-2.416" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="18.713" y="10.588" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter></defs></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+  <!-- Background Circle -->
+  <circle cx="16" cy="16" r="16" fill="#2563eb"/>
+  
+  <!-- WiFi Signal -->
+  <path d="M16 8C12.5 8 9.5 9.5 7.5 11.5L9 13C10.5 11.5 13 10.5 16 10.5C19 10.5 21.5 11.5 23 13L24.5 11.5C22.5 9.5 19.5 8 16 8Z" fill="white"/>
+  <path d="M16 13C13.5 13 11.5 14 10 15.5L11.5 17C12.5 16 14 15.5 16 15.5C18 15.5 19.5 16 20.5 17L22 15.5C20.5 14 18.5 13 16 13Z" fill="white"/>
+  <circle cx="16" cy="20" r="2" fill="white"/>
+  
+  <!-- Network Lines -->
+  <path d="M8 22L10 24M24 22L22 24M6 26H10M22 26H26" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+
 -------------------------------------------------------------------
 FILE: ./frontend/public/icons.svg
 -------------------------------------------------------------------
@@ -9149,6 +10026,42 @@ FILE: ./frontend/public/icons.svg
     <path fill="#08060d" fill-rule="evenodd" d="M1.893 1.98c.052.072 1.245 1.769 2.653 3.77l2.892 4.114c.183.261.333.48.333.486s-.068.089-.152.183l-.522.593-.765.867-3.597 4.087c-.375.426-.734.834-.798.905a1 1 0 0 0-.118.148c0 .01.236.017.664.017h.663l.729-.83c.4-.457.796-.906.879-.999a692 692 0 0 0 1.794-2.038c.034-.037.301-.34.594-.675l.551-.624.345-.392a7 7 0 0 1 .34-.374c.006 0 .93 1.306 2.052 2.903l2.084 2.965.045.063h2.275c1.87 0 2.273-.003 2.266-.021-.008-.02-1.098-1.572-3.894-5.547-2.013-2.862-2.28-3.246-2.273-3.266.008-.019.282-.332 2.085-2.38l2-2.274 1.567-1.782c.022-.028-.016-.03-.65-.03h-.674l-.3.342a871 871 0 0 1-1.782 2.025c-.067.075-.405.458-.75.852a100 100 0 0 1-.803.91c-.148.172-.299.344-.99 1.127-.304.343-.32.358-.345.327-.015-.019-.904-1.282-1.976-2.808L6.365 1.85H1.8zm1.782.91 8.078 11.294c.772 1.08 1.413 1.973 1.425 1.984.016.017.241.02 1.05.017l1.03-.004-2.694-3.766L7.796 5.75 5.722 2.852l-1.039-.004-1.039-.004z" clip-rule="evenodd"/>
   </symbol>
 </svg>
+
+-------------------------------------------------------------------
+FILE: ./frontend/public/manifest.json
+-------------------------------------------------------------------
+{
+  "name": "ISP Billing & Management System",
+  "short_name": "ISP Billing",
+  "description": "Professional ISP billing and network management solution",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+-------------------------------------------------------------------
+FILE: ./frontend/public/_redirects
+-------------------------------------------------------------------
+/*    /index.html   200
 
 -------------------------------------------------------------------
 FILE: ./frontend/README.md
@@ -9375,6 +10288,12 @@ import PaymentsPage from './pages/PaymentsPage';
 import ReportsPage from './pages/ReportsPage';
 import RoutersPage from './pages/RoutersPage';
 import LiveStatusPage from './pages/LiveStatusPage';
+// Phase 6 Imports
+import FinancePage from './pages/FinancePage';
+import UsersPage from './pages/UsersPage';
+import AuditLogsPage from './pages/AuditLogsPage';
+import SettingsPage from './pages/SettingsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -9405,9 +10324,14 @@ function App() {
               <Route path="/packages" element={<PackagesPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
               <Route path="/routers" element={<RoutersPage />} />
               <Route path="/live-status" element={<LiveStatusPage />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/audit-logs" element={<AuditLogsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -9931,9 +10855,13 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CreditCard, Wifi, Receipt,
-  BarChart3, Settings, LogOut, Menu, X, Bell, Server, Zap
+  BarChart3, Settings, LogOut, Menu, X, Bell, Server, Zap,
+  Wallet, Shield, Activity
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { notificationApi } from '../services/notificationApi';
 import useAuthStore from '../store/authStore';
+import ThemeToggle from './ThemeToggle';
 import toast from 'react-hot-toast';
 
 const navItems = [
@@ -9944,7 +10872,10 @@ const navItems = [
   { to: '/payments', icon: Receipt, label: 'Payments' },
   { to: '/routers', icon: Server, label: 'Routers' },
   { to: '/live-status', icon: Zap, label: 'Live Status' },
+  { to: '/finance', icon: Wallet, label: 'Finance' },
   { to: '/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/users', icon: Shield, label: 'Users' },
+  { to: '/audit-logs', icon: Activity, label: 'Audit Logs' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
@@ -9953,6 +10884,12 @@ export default function Layout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { data: notifData } = useQuery({
+    queryKey: ['unreadNotifs'],
+    queryFn: () => notificationApi.getUnreadCount().then(res => res.data.data),
+    refetchInterval: 30000,
+  });
 
   const handleLogout = () => {
     logout();
@@ -9963,8 +10900,7 @@ export default function Layout() {
   const currentPageTitle = navItems.find(item => item.to === location.pathname)?.label || 'Dashboard';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Mobile Overlay */}
+    <div className="min-h-screen bg-background flex">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
@@ -9972,30 +10908,27 @@ export default function Layout() {
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`
-        fixed lg:sticky inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200
+        fixed lg:sticky inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col h-screen
       `}>
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 flex-shrink-0">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-sm">
               <Wifi className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-lg font-bold text-slate-900">ISP Billing</span>
-              <p className="text-[10px] text-slate-500 -mt-1">Management System</p>
+              <span className="text-lg font-bold text-slate-900 dark:text-slate-100">ISP Billing</span>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 -mt-1">Management System</p>
             </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600">
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Main Menu</p>
           {navItems.slice(0, 6).map((item) => (
@@ -10007,7 +10940,7 @@ export default function Layout() {
                 `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
                 ${isActive
                   ? 'bg-primary text-white shadow-sm shadow-primary/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
                 }`
               }
             >
@@ -10016,8 +10949,8 @@ export default function Layout() {
             </NavLink>
           ))}
 
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 mt-4">Network</p>
-          {navItems.slice(6, 8).map((item) => (
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 mt-4">Network & Finance</p>
+          {navItems.slice(6, 9).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -10026,7 +10959,7 @@ export default function Layout() {
                 `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
                 ${isActive
                   ? 'bg-primary text-white shadow-sm shadow-primary/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
                 }`
               }
             >
@@ -10036,7 +10969,7 @@ export default function Layout() {
           ))}
 
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 mt-4">System</p>
-          {navItems.slice(8).map((item) => (
+          {navItems.slice(9).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -10045,7 +10978,7 @@ export default function Layout() {
                 `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
                 ${isActive
                   ? 'bg-primary text-white shadow-sm shadow-primary/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
                 }`
               }
             >
@@ -10055,19 +10988,18 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User Info */}
-        <div className="p-4 border-t border-slate-200 flex-shrink-0">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
               {user?.fullName?.charAt(0) || 'A'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">{user?.fullName}</p>
-              <p className="text-xs text-slate-500 capitalize">{user?.role?.toLowerCase()}</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{user?.fullName}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role?.toLowerCase()}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -10076,30 +11008,35 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 flex-shrink-0">
+        <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
             >
               <Menu className="w-5 h-5" />
             </button>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-semibold text-slate-900">{currentPageTitle}</h1>
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{currentPageTitle}</h1>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+            <ThemeToggle />
+            <button 
+              onClick={() => navigate('/notifications')} 
+              className="relative p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+              {notifData?.count > 0 && (
+                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-800">
+                  {notifData.count > 99 ? '99+' : notifData.count}
+                </span>
+              )}
             </button>
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <Outlet />
         </main>
@@ -10578,14 +11515,15 @@ export default function PaymentForm({ invoice, onSuccess, onCancel }) {
 -------------------------------------------------------------------
 FILE: ./frontend/src/components/ProtectedRoute.jsx
 -------------------------------------------------------------------
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 
 export default function ProtectedRoute() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <Outlet />;
@@ -10747,6 +11685,70 @@ export default function RouterForm({ router, onSuccess, onCancel }) {
   );
 }
 -------------------------------------------------------------------
+FILE: ./frontend/src/components/ThemeToggle.jsx
+-------------------------------------------------------------------
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+
+export default function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+      title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+    >
+      {theme === 'light' ? (
+        <Moon className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+      ) : (
+        <Sun className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+      )}
+    </button>
+  );
+}
+-------------------------------------------------------------------
+FILE: ./frontend/src/context/ThemeContext.jsx
+-------------------------------------------------------------------
+import { createContext, useContext, useEffect, useState } from 'react';
+
+const ThemeContext = createContext();
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+}
+
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+-------------------------------------------------------------------
 FILE: ./frontend/src/index.css
 -------------------------------------------------------------------
 @tailwind base;
@@ -10754,18 +11756,68 @@ FILE: ./frontend/src/index.css
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
+    --border-primary: #e2e8f0;
+    --border-secondary: #cbd5e1;
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  }
+
+  .dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --border-primary: #334155;
+    --border-secondary: #475569;
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  }
+
   body {
-    @apply bg-background text-slate-800 antialiased;
+    @apply antialiased;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
   }
 }
 
-/* Print Styles */
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-secondary);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+  }
+}
+
 @media print {
   body {
     background: white !important;
+    color: black !important;
   }
   
-  .print\\:hidden {
+  .print\:hidden {
     display: none !important;
   }
   
@@ -10786,17 +11838,111 @@ FILE: ./frontend/src/index.css
 -------------------------------------------------------------------
 FILE: ./frontend/src/main.jsx
 -------------------------------------------------------------------
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { ThemeProvider } from './context/ThemeContext';
+import './index.css';
+import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
-  </StrictMode>,
-)
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
+  </StrictMode>
+);
+-------------------------------------------------------------------
+FILE: ./frontend/src/pages/AuditLogsPage.jsx
+-------------------------------------------------------------------
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { auditApi } from '../services/auditApi';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
 
+export default function AuditLogsPage() {
+  const [filters, setFilters] = useState({ action: '', fromDate: '', toDate: '' });
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['auditLogs', { ...filters, page }],
+    queryFn: () => auditApi.getLogs({ ...filters, page, limit: 50 }).then(res => res.data.data),
+  });
+
+  const getActionBadge = (action) => {
+    const colors = { LOGIN: 'info', LOGOUT: 'default', CREATE_CUSTOMER: 'success', UPDATE_CUSTOMER: 'info', DELETE_CUSTOMER: 'danger', SUSPEND_CUSTOMER: 'warning', RESTORE_CUSTOMER: 'success', RECORD_PAYMENT: 'success', GENERATE_INVOICES: 'info', CREATE_USER: 'success', CHANGE_PASSWORD: 'warning' };
+    return <Badge variant={colors[action] || 'default'}>{action}</Badge>;
+  };
+
+  return (
+    <div className="space-y-4 lg:space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Audit Logs</h1>
+        <p className="text-sm text-slate-500 mt-1">System activity history</p>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200 p-3 lg:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Action</label>
+            <input type="text" placeholder="Search action..." value={filters.action} onChange={(e) => setFilters({ ...filters, action: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">From Date</label>
+            <input type="date" value={filters.fromDate} onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">To Date</label>
+            <input type="date" value={filters.toDate} onChange={(e) => setFilters({ ...filters, toDate: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Timestamp</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Action</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {isLoading ? (
+                <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+              ) : data?.logs?.length === 0 ? (
+                <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">No logs found</td></tr>
+              ) : (
+                data?.logs?.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{new Date(log.createdAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-slate-900">{log.user?.fullName}</div>
+                      <div className="text-xs text-slate-500">{log.user?.username}</div>
+                    </td>
+                    <td className="px-6 py-4">{getActionBadge(log.action)}</td>
+                    <td className="px-6 py-4">
+                      <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-700 max-w-md block truncate">{log.details}</code>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {data?.pagination?.totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+            <div className="text-sm text-slate-500">Page {data.pagination.page} of {data.pagination.totalPages} ({data.pagination.total} total)</div>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Prev</Button>
+              <Button variant="outline" size="sm" disabled={page === data.pagination.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 -------------------------------------------------------------------
 FILE: ./frontend/src/pages/BillingPage.jsx
 -------------------------------------------------------------------
@@ -11401,7 +12547,8 @@ FILE: ./frontend/src/pages/DashboardPage.jsx
 import { useQuery } from '@tanstack/react-query';
 import { customerApi } from '../services/customerApi';
 import { invoiceApi } from '../services/invoiceApi';
-import { Users, Wifi, CreditCard, AlertTriangle, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { activityApi } from '../services/activityApi';
+import { Users, Wifi, CreditCard, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import useAuthStore from '../store/authStore';
 
@@ -11411,7 +12558,6 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const firstName = user?.fullName?.split(' ')[0] || 'Admin';
 
-  // Fetch real stats
   const { data: customersData } = useQuery({
     queryKey: ['customers', { page: 1, limit: 1 }],
     queryFn: () => customerApi.getAll({ page: 1, limit: 1 }).then(res => res.data.data),
@@ -11423,12 +12569,17 @@ export default function DashboardPage() {
     queryFn: () => invoiceApi.getMonthlySummary(currentMonth).then(res => res.data.data),
   });
 
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['recentActivities'],
+    queryFn: () => activityApi.getRecent(5).then(res => res.data.data),
+    refetchInterval: 30000,
+  });
+
   const totalCustomers = customersData?.pagination?.total || 0;
   const activeCustomers = customersData?.customers?.filter(c => c.status === 'ACTIVE').length || 0;
   const suspendedCustomers = customersData?.customers?.filter(c => c.status === 'SUSPENDED').length || 0;
   const dueAmount = summaryData?.totalDue || 0;
 
-  // Mock revenue data for chart (replace with real data later)
   const revenueData = [
     { month: 'Jan', revenue: 45000 },
     { month: 'Feb', revenue: 52000 },
@@ -11489,49 +12640,94 @@ export default function DashboardPage() {
     },
   ];
 
-  const recentActivities = [
-    { id: 1, text: 'Customer "Rahim" paid ৳1,000 via bKash', time: '2 hours ago', type: 'payment' },
-    { id: 2, text: 'Invoice #2026-08-001 generated', time: '5 hours ago', type: 'invoice' },
-    { id: 3, text: 'Customer "Karim" suspended (overdue)', time: '1 day ago', type: 'suspend' },
-    { id: 4, text: 'New package "Premium 100Mbps" created', time: '2 days ago', type: 'package' },
-  ];
+  const formatActivityMessage = (activity) => {
+    try {
+      const details = JSON.parse(activity.details || '{}');
+      
+      switch (activity.action) {
+        case 'GENERATE_INVOICES':
+          return `Generated ${details.results?.created || 0} invoices (${details.results?.skipped || 0} skipped) for ${details.month}`;
+        case 'CREATE_CUSTOMER':
+          return `Created new customer: ${details.name}`;
+        case 'UPDATE_CUSTOMER':
+          return `Updated customer: ${details.name}`;
+        case 'DELETE_CUSTOMER':
+          return `Deleted customer: ${details.name}`;
+        case 'SUSPEND_CUSTOMER':
+          return `Suspended customer: ${details.name}`;
+        case 'RESTORE_CUSTOMER':
+          return `Restored customer: ${details.name}`;
+        case 'RECORD_PAYMENT':
+          return `Recorded payment of ৳${details.amount} via ${details.method}`;
+        case 'LOGIN':
+          return `User ${details.username} logged in`;
+        case 'LOGOUT':
+          return `User ${details.username} logged out`;
+        case 'BULK_SUSPEND':
+          return `Bulk suspended ${details.results?.success || 0} customers (${details.results?.failed || 0} failed)`;
+        case 'BULK_RESTORE':
+          return `Bulk restored ${details.results?.success || 0} customers (${details.results?.failed || 0} failed)`;
+        case 'CREATE_PACKAGE':
+          return `Created package: ${details.name}`;
+        case 'CREATE_ROUTER':
+          return `Added router: ${details.name}`;
+        default:
+          return activity.action.replace(/_/g, ' ');
+      }
+    } catch (error) {
+      return activity.action.replace(/_/g, ' ');
+    }
+  };
+
+  const recentActivities = activityData?.logs?.map(log => ({
+    id: log.id,
+    text: formatActivityMessage(log),
+    time: new Date(log.createdAt).toLocaleString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      day: 'numeric',
+      month: 'short'
+    }),
+    type: log.action.toLowerCase().includes('payment') ? 'payment' : 
+          log.action.toLowerCase().includes('customer') ? 'customer' : 
+          log.action.toLowerCase().includes('invoice') ? 'invoice' : 'system',
+    user: log.user?.fullName || 'System',
+  })) || [];
 
   const getActivityIcon = (type) => {
     const icons = {
       payment: '💰',
-      invoice: '',
-      suspend: '️',
-      package: '',
+      customer: '👤',
+      invoice: '📄',
+      system: '⚙️',
     };
     return icons[type] || '📌';
   };
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
             Welcome back, {firstName} 👋
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Here's what's happening with your ISP today
           </p>
         </div>
-        <div className="text-sm text-slate-500 bg-white px-4 py-2 rounded-lg border border-slate-200">
+        <div className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
           📅 {new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow duration-200"
+            className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-shadow duration-200"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className={`${stat.bgColor} p-2.5 rounded-lg`}>
+              <div className={`${stat.bgColor} dark:bg-opacity-20 p-2.5 rounded-lg`}>
                 <stat.icon className={`w-5 h-5 ${stat.textColor}`} />
               </div>
               <div className={`flex items-center space-x-1 text-xs font-medium ${
@@ -11541,25 +12737,23 @@ export default function DashboardPage() {
                 <span>{stat.change}</span>
               </div>
             </div>
-            <p className="text-sm text-slate-500 mb-1">{stat.label}</p>
-            <p className="text-2xl lg:text-3xl font-bold text-slate-900">{stat.value}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{stat.label}</p>
+            <p className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">{stat.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Revenue Overview</h3>
-              <p className="text-sm text-slate-500">Monthly collection trend</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Revenue Overview</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Monthly collection trend</p>
             </div>
             <div className="flex items-center space-x-2 text-sm">
               <span className="flex items-center space-x-1">
                 <div className="w-3 h-3 rounded-full bg-primary"></div>
-                <span className="text-slate-600">Revenue</span>
+                <span className="text-slate-600 dark:text-slate-300">Revenue</span>
               </span>
             </div>
           </div>
@@ -11597,11 +12791,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Status Pie Chart */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-slate-900">Customer Status</h3>
-            <p className="text-sm text-slate-500">Distribution overview</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Customer Status</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Distribution overview</p>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -11628,40 +12821,210 @@ export default function DashboardPage() {
               <div key={item.name} className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }}></div>
-                  <span className="text-slate-600">{item.name}</span>
+                  <span className="text-slate-600 dark:text-slate-300">{item.name}</span>
                 </div>
-                <span className="font-medium text-slate-900">{item.value}</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">{item.value}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
-            <p className="text-sm text-slate-500">Latest system events</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Recent Activity</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Latest system events</p>
           </div>
           <button className="text-sm text-primary hover:underline">View all</button>
         </div>
         <div className="space-y-3">
-          {recentActivities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-            >
-              <div className="text-xl flex-shrink-0">{getActivityIcon(activity.type)}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-700">{activity.text}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{activity.time}</p>
+          {activityLoading ? (
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">Loading activities...</div>
+          ) : recentActivities.length === 0 ? (
+            <div className="text-center text-slate-500 dark:text-slate-400 py-4">No recent activities found</div>
+          ) : (
+            recentActivities.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-start space-x-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <div className="text-xl flex-shrink-0">{getActivityIcon(activity.type)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 font-medium truncate" title={activity.text}>
+                    {activity.text}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-0.5">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{activity.user}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">•</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{activity.time}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>
+  );
+}
+-------------------------------------------------------------------
+FILE: ./frontend/src/pages/FinancePage.jsx
+-------------------------------------------------------------------
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { financeApi } from '../services/financeApi';
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import Button from '../components/Button';
+import Modal from '../components/Modal';
+import toast from 'react-hot-toast';
+
+export default function FinancePage() {
+  const [isIncomeOpen, setIsIncomeOpen] = useState(false);
+  const [isExpenseOpen, setIsExpenseOpen] = useState(false);
+  const [filters, setFilters] = useState({ fromDate: '', toDate: '' });
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+  const { data: transactionsData } = useQuery({
+    queryKey: ['transactions', { ...filters, page }],
+    queryFn: () => financeApi.getTransactions({ ...filters, page, limit: 20 }).then(res => res.data.data),
+  });
+
+  const { data: summaryData } = useQuery({
+    queryKey: ['financeSummary', currentMonth],
+    queryFn: () => financeApi.getMonthlySummary(currentMonth).then(res => res.data.data),
+  });
+
+  const addIncomeMutation = useMutation({
+    mutationFn: (data) => financeApi.addIncome(data),
+    onSuccess: () => { toast.success('Income recorded'); queryClient.invalidateQueries(['transactions']); queryClient.invalidateQueries(['financeSummary']); setIsIncomeOpen(false); },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+  });
+
+  const addExpenseMutation = useMutation({
+    mutationFn: (data) => financeApi.addExpense(data),
+    onSuccess: () => { toast.success('Expense recorded'); queryClient.invalidateQueries(['transactions']); queryClient.invalidateQueries(['financeSummary']); setIsExpenseOpen(false); },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+  });
+
+  return (
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Finance</h1>
+          <p className="text-sm text-slate-500 mt-1">Track income and expenses</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="success" onClick={() => setIsIncomeOpen(true)}><ArrowUpRight className="w-4 h-4" /><span>Add Income</span></Button>
+          <Button variant="danger" onClick={() => setIsExpenseOpen(true)}><ArrowDownRight className="w-4 h-4" /><span>Add Expense</span></Button>
+        </div>
+      </div>
+
+      {summaryData && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <p className="text-xs text-slate-500 mb-1">Customer Payments</p>
+            <p className="text-xl lg:text-2xl font-bold text-slate-900">৳{summaryData.customerPayments?.toLocaleString() || 0}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <p className="text-xs text-slate-500 mb-1">Other Income</p>
+            <p className="text-xl lg:text-2xl font-bold text-green-600">৳{summaryData.otherIncome?.toLocaleString() || 0}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <p className="text-xs text-slate-500 mb-1">Total Expenses</p>
+            <p className="text-xl lg:text-2xl font-bold text-red-600">৳{summaryData.totalExpense?.toLocaleString() || 0}</p>
+          </div>
+          <div className={`rounded-xl border p-4 ${summaryData.netProfit >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <p className={`text-xs mb-1 ${summaryData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>Net Profit</p>
+            <p className={`text-xl lg:text-2xl font-bold ${summaryData.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>৳{summaryData.netProfit?.toLocaleString() || 0}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-slate-200 p-3 lg:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">From Date</label>
+            <input type="date" value={filters.fromDate} onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">To Date</label>
+            <input type="date" value={filters.toDate} onChange={(e) => setFilters({ ...filters, toDate: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="divide-y divide-slate-200">
+          {transactionsData?.transactions?.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">No transactions found</div>
+          ) : (
+            transactionsData?.transactions?.map((t) => (
+              <div key={`${t.type}-${t.id}`} className="p-4 flex items-center justify-between hover:bg-slate-50">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${t.type === 'INCOME' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    {t.type === 'INCOME' ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">{t.category}</p>
+                    <p className="text-xs text-slate-500">{new Date(t.date).toLocaleDateString('en-GB')} • {t.recorder?.fullName}</p>
+                    {t.description && <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>}
+                  </div>
+                </div>
+                <p className={`text-lg font-bold ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>{t.type === 'INCOME' ? '+' : '-'}৳{t.amount.toLocaleString()}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <Modal isOpen={isIncomeOpen} onClose={() => setIsIncomeOpen(false)} title="Add Income">
+        <FinanceForm type="income" onSubmit={(data) => addIncomeMutation.mutate(data)} isLoading={addIncomeMutation.isPending} onCancel={() => setIsIncomeOpen(false)} />
+      </Modal>
+      <Modal isOpen={isExpenseOpen} onClose={() => setIsExpenseOpen(false)} title="Add Expense">
+        <FinanceForm type="expense" onSubmit={(data) => addExpenseMutation.mutate(data)} isLoading={addExpenseMutation.isPending} onCancel={() => setIsExpenseOpen(false)} />
+      </Modal>
+    </div>
+  );
+}
+
+function FinanceForm({ type, onSubmit, isLoading, onCancel }) {
+  const [formData, setFormData] = useState({ category: '', amount: '', description: '', date: new Date().toISOString().split('T')[0] });
+  const categories = type === 'income' ? ['Service Fee', 'Installation', 'Equipment Sale', 'Other'] : ['Electricity', 'Internet', 'Rent', 'Salary', 'Maintenance', 'Other'];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit({ ...formData, amount: parseFloat(formData.amount) });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+        <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required>
+          <option value="">Select category</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Amount (৳)</label>
+        <input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+        <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Description (Optional)</label>
+        <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows="2" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" />
+      </div>
+      <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+        <Button variant="outline" onClick={onCancel} type="button">Cancel</Button>
+        <Button type="submit" isLoading={isLoading}>{type === 'income' ? 'Record Income' : 'Record Expense'}</Button>
+      </div>
+    </form>
   );
 }
 -------------------------------------------------------------------
@@ -11877,6 +13240,121 @@ export default function LiveStatusPage() {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+-------------------------------------------------------------------
+FILE: ./frontend/src/pages/NotificationsPage.jsx
+-------------------------------------------------------------------
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { notificationApi } from '../services/notificationApi';
+import { Bell, CheckCheck, Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
+import toast from 'react-hot-toast';
+
+export default function NotificationsPage() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationApi.getAll({ page: 1, limit: 50 }).then(res => res.data.data),
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: (id) => notificationApi.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['notifications']);
+      queryClient.invalidateQueries(['unreadNotifs']);
+    },
+  });
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => notificationApi.markAllAsRead(),
+    onSuccess: () => {
+      toast.success('All notifications marked as read');
+      queryClient.invalidateQueries(['notifications']);
+      queryClient.invalidateQueries(['unreadNotifs']);
+    },
+  });
+
+  const getIcon = (type) => {
+    switch (type) {
+      case 'SUCCESS': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'WARNING': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+      case 'ERROR': return <XCircle className="w-5 h-5 text-red-500" />;
+      default: return <Info className="w-5 h-5 text-blue-500" />;
+    }
+  };
+
+  return (
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {data?.pagination?.total || 0} total notifications
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => markAllAsReadMutation.mutate()}
+          disabled={markAllAsReadMutation.isPending}
+        >
+          <CheckCheck className="w-4 h-4" />
+          <span>Mark all as read</span>
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-500">Loading notifications...</div>
+        ) : data?.notifications?.length === 0 ? (
+          <div className="p-12 text-center">
+            <Bell className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 font-medium">No notifications yet</p>
+            <p className="text-sm text-slate-400 mt-1">You're all caught up!</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-200">
+            {data.notifications.map((notif) => (
+              <div 
+                key={notif.id} 
+                className={`p-4 flex items-start space-x-4 hover:bg-slate-50 transition-colors ${!notif.isRead ? 'bg-blue-50/50' : ''}`}
+              >
+                <div className="flex-shrink-0 mt-1">
+                  {getIcon(notif.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <h3 className={`text-sm font-semibold ${!notif.isRead ? 'text-slate-900' : 'text-slate-700'}`}>
+                      {notif.title}
+                    </h3>
+                    {!notif.isRead && (
+                      <Badge variant="info">New</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">{notif.message}</p>
+                  <p className="text-xs text-slate-400 mt-2">
+                    {new Date(notif.createdAt).toLocaleString('en-GB', { 
+                      dateStyle: 'medium', 
+                      timeStyle: 'short' 
+                    })}
+                  </p>
+                </div>
+                {!notif.isRead && (
+                  <button
+                    onClick={() => markAsReadMutation.mutate(notif.id)}
+                    className="flex-shrink-0 text-xs text-primary hover:underline"
+                  >
+                    Mark as read
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -12569,6 +14047,327 @@ export default function RoutersPage() {
   );
 }
 -------------------------------------------------------------------
+FILE: ./frontend/src/pages/SettingsPage.jsx
+-------------------------------------------------------------------
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { userApi } from '../services/userApi';
+import { User, Lock, Save, Shield } from 'lucide-react';
+import Button from '../components/Button';
+import useAuthStore from '../store/authStore';
+import toast from 'react-hot-toast';
+
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState('profile');
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+        <p className="text-sm text-slate-500 mt-1">Manage your account and preferences</p>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200">
+        <div className="border-b border-slate-200">
+          <nav className="flex space-x-4 px-6">
+            {[{ id: 'profile', label: 'Profile', icon: User }, { id: 'password', label: 'Password', icon: Lock }, { id: 'security', label: 'Security', icon: Shield }].map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center space-x-2 py-4 px-2 border-b-2 text-sm font-medium transition-colors ${activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="p-6">
+          {activeTab === 'profile' && <ProfileTab />}
+          {activeTab === 'password' && <PasswordTab />}
+          {activeTab === 'security' && <SecurityInfo />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileTab() {
+  const { user } = useAuthStore();
+  const [formData, setFormData] = useState({ fullName: user?.fullName || '', phone: '', address: '' });
+  const updateMutation = useMutation({
+    mutationFn: (data) => userApi.updateProfile(data),
+    onSuccess: () => toast.success('Profile updated'),
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update'),
+  });
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(formData); }} className="space-y-4 max-w-2xl">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+        <input type="text" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+        <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="01XXXXXXXXX" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+        <textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows="3" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" />
+      </div>
+      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+        <div className="text-sm text-slate-500">Username: <span className="font-medium text-slate-900">{user?.username}</span><span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">{user?.role}</span></div>
+        <Button type="submit" isLoading={updateMutation.isPending}><Save className="w-4 h-4" /><span>Save Changes</span></Button>
+      </div>
+    </form>
+  );
+}
+
+function PasswordTab() {
+  const [formData, setFormData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const changeMutation = useMutation({
+    mutationFn: (data) => userApi.changePassword(data),
+    onSuccess: () => { toast.success('Password changed successfully'); setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' }); },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to change password'),
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (formData.newPassword !== formData.confirmPassword) { toast.error('Passwords do not match'); return; }
+    if (formData.newPassword.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    changeMutation.mutate({ currentPassword: formData.currentPassword, newPassword: formData.newPassword });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+        <input type="password" value={formData.currentPassword} onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+        <input type="password" value={formData.newPassword} onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+        <input type="password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required />
+      </div>
+      <div className="flex justify-end pt-4 border-t border-slate-200">
+        <Button type="submit" isLoading={changeMutation.isPending}><Lock className="w-4 h-4" /><span>Change Password</span></Button>
+      </div>
+    </form>
+  );
+}
+
+function SecurityInfo() {
+  const { user } = useAuthStore();
+  return (
+    <div className="max-w-2xl space-y-4">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h3 className="font-semibold text-green-900 mb-2">Account Security Status</h3>
+        <ul className="space-y-2 text-sm text-green-800">
+          <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>Password hashing: bcrypt (10 rounds)</span></li>
+          <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>JWT token authentication</span></li>
+          <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>Role-based access control</span></li>
+          <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>Audit logging enabled</span></li>
+        </ul>
+      </div>
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <h3 className="font-semibold text-slate-900 mb-2">Session Information</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between"><span className="text-slate-500">User ID</span><span className="font-mono text-slate-900">{user?.id}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Role</span><span className="font-medium text-slate-900">{user?.role}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Token Storage</span><span className="font-medium text-slate-900">localStorage</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+-------------------------------------------------------------------
+FILE: ./frontend/src/pages/UsersPage.jsx
+-------------------------------------------------------------------
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { userApi } from '../services/userApi';
+import { Plus, Edit, Trash2, Shield } from 'lucide-react';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
+import Modal from '../components/Modal';
+import toast from 'react-hot-toast';
+
+export default function UsersPage() {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const queryClient = useQueryClient();
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => userApi.getAll().then(res => res.data.data),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => userApi.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries(['users']); toast.success('User deleted'); },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+  });
+
+  const handleDelete = (id, username) => {
+    if (window.confirm(`Delete user "${username}"?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const getRoleBadge = (role) => {
+    const variants = { ADMIN: 'danger', MANAGER: 'warning', STAFF: 'info' };
+    return <Badge variant={variants[role] || 'default'}>{role}</Badge>;
+  };
+
+  return (
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage system users and roles</p>
+        </div>
+        <Button onClick={() => { setEditingUser(null); setIsFormOpen(true); }}><Plus className="w-4 h-4" /><span>Add User</span></Button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {isLoading ? (
+                <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+              ) : users?.length === 0 ? (
+                <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">No users found</td></tr>
+              ) : (
+                users?.map((u) => (
+                  <tr key={u.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">{u.fullName?.charAt(0) || 'U'}</div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{u.fullName}</p>
+                          <p className="text-xs text-slate-500">@{u.username}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">{getRoleBadge(u.role)}</td>
+                    <td className="px-6 py-4">
+                      <Badge variant={u.isActive ? 'success' : 'danger'}>{u.isActive ? 'Active' : 'Disabled'}</Badge>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{new Date(u.createdAt).toLocaleDateString('en-GB')}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end space-x-1">
+                        <button onClick={() => { setEditingUser(u); setIsFormOpen(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(u.id, u.username)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} title={editingUser ? 'Edit User' : 'Add New User'}>
+        <UserForm user={editingUser} onSuccess={() => { setIsFormOpen(false); queryClient.invalidateQueries(['users']); }} onCancel={() => setIsFormOpen(false)} />
+      </Modal>
+    </div>
+  );
+}
+
+function UserForm({ user, onSuccess, onCancel }) {
+  const isEditing = !!user;
+  const [formData, setFormData] = useState(user || { username: '', password: '', fullName: '', role: 'STAFF', phone: '', address: '', salary: '' });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => userApi.create(data),
+    onSuccess: () => { toast.success('User created'); onSuccess(); },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data) => userApi.update(user.id, data),
+    onSuccess: () => { toast.success('User updated'); onSuccess(); },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const payload = { ...formData };
+    if (isEditing && !payload.password) delete payload.password;
+    if (payload.salary) payload.salary = parseFloat(payload.salary);
+
+    if (isEditing) {
+      updateMutation.mutate(payload);
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Username *</label>
+          <input type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required disabled={isEditing} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{isEditing ? 'New Password (leave blank to keep)' : 'Password *'}</label>
+          <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required={!isEditing} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+          <input type="text" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Role *</label>
+          <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" required>
+            <option value="ADMIN">Admin</option>
+            <option value="MANAGER">Manager</option>
+            <option value="STAFF">Staff</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+          <input type="text" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Salary (৳)</label>
+          <input type="number" step="0.01" value={formData.salary || ''} onChange={(e) => setFormData({ ...formData, salary: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+        <textarea value={formData.address || ''} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows="2" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" />
+      </div>
+      <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+        <Button variant="outline" onClick={onCancel} type="button">Cancel</Button>
+        <Button type="submit" isLoading={createMutation.isPending || updateMutation.isPending}>{isEditing ? 'Update User' : 'Create User'}</Button>
+      </div>
+    </form>
+  );
+}
+-------------------------------------------------------------------
+FILE: ./frontend/src/services/activityApi.js
+-------------------------------------------------------------------
+import api from './api';
+
+export const activityApi = {
+  getRecent: (limit = 5) => {
+    return api.get('/audit', { params: { limit, page: 1 } });
+  },
+  
+  getStats: () => {
+    return api.get('/audit/stats');
+  }
+};
+-------------------------------------------------------------------
 FILE: ./frontend/src/services/api.js
 -------------------------------------------------------------------
 import axios from 'axios';
@@ -12578,7 +14377,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor: Attach JWT token to every outgoing request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('isp_token');
   if (token) {
@@ -12587,21 +14385,33 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor: Handle 401 (token expired) globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('isp_token');
-      localStorage.removeItem('isp_user');
-      window.location.href = '/login';
+      if (!window.location.pathname.includes('/login')) {
+        localStorage.removeItem('isp_token');
+        localStorage.removeItem('isp_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
 );
 
 export default api;
+-------------------------------------------------------------------
+FILE: ./frontend/src/services/auditApi.js
+-------------------------------------------------------------------
+import api from './api';
 
+export const auditApi = {
+  getLogs: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/audit${queryParams ? `?${queryParams}` : ''}`);
+  },
+  getStats: () => api.get('/audit/stats'),
+};
 -------------------------------------------------------------------
 FILE: ./frontend/src/services/authApi.js
 -------------------------------------------------------------------
@@ -12635,6 +14445,20 @@ export const customerApi = {
   restore: (id) => api.post(`/customers/${id}/restore`),
 };
 -------------------------------------------------------------------
+FILE: ./frontend/src/services/financeApi.js
+-------------------------------------------------------------------
+import api from './api';
+
+export const financeApi = {
+  getTransactions: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/finance/transactions${queryParams ? `?${queryParams}` : ''}`);
+  },
+  getMonthlySummary: (month) => api.get(`/finance/monthly-summary?month=${month}`),
+  addIncome: (data) => api.post('/finance/income', data),
+  addExpense: (data) => api.post('/finance/expense', data),
+};
+-------------------------------------------------------------------
 FILE: ./frontend/src/services/invoiceApi.js
 -------------------------------------------------------------------
 import api from './api';
@@ -12650,6 +14474,20 @@ export const invoiceApi = {
   generate: (data) => api.post('/invoices/generate', data),
 
   getMonthlySummary: (month) => api.get(`/invoices/summary?month=${month}`),
+};
+-------------------------------------------------------------------
+FILE: ./frontend/src/services/notificationApi.js
+-------------------------------------------------------------------
+import api from './api';
+
+export const notificationApi = {
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  getAll: (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    return api.get(`/notifications${queryParams ? `?${queryParams}` : ''}`);
+  },
+  markAsRead: (id) => api.post(`/notifications/${id}/read`),
+  markAllAsRead: () => api.post('/notifications/mark-all-read'),
 };
 -------------------------------------------------------------------
 FILE: ./frontend/src/services/packageApi.js
@@ -12699,6 +14537,19 @@ export const routerApi = {
   bulkRestore: (customerIds) => api.post('/routers/bulk/restore', { customerIds }),
 };
 -------------------------------------------------------------------
+FILE: ./frontend/src/services/userApi.js
+-------------------------------------------------------------------
+import api from './api';
+
+export const userApi = {
+  getAll: () => api.get('/users'),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+  changePassword: (data) => api.post('/users/change-password', data),
+  updateProfile: (data) => api.put('/users/profile/me', data),
+};
+-------------------------------------------------------------------
 FILE: ./frontend/src/store/authStore.js
 -------------------------------------------------------------------
 import { create } from 'zustand';
@@ -12727,6 +14578,7 @@ FILE: ./frontend/tailwind.config.js
 -------------------------------------------------------------------
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -12736,7 +14588,17 @@ export default {
       colors: {
         primary: '#2563eb',
         primaryDark: '#1d4ed8',
-        background: '#f8fafc',
+        background: 'var(--bg-primary)',
+        backgroundSecondary: 'var(--bg-secondary)',
+        backgroundTertiary: 'var(--bg-tertiary)',
+        textPrimary: 'var(--text-primary)',
+        textSecondary: 'var(--text-secondary)',
+        textTertiary: 'var(--text-tertiary)',
+        borderPrimary: 'var(--border-primary)',
+        borderSecondary: 'var(--border-secondary)',
+      },
+      boxShadow: {
+        custom: 'var(--shadow)',
       }
     },
   },

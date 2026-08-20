@@ -1,7 +1,9 @@
+// FILE: ./frontend/src/pages/RoutersPage.jsx
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { routerApi } from '../services/routerApi';
-import { Plus, Edit, Trash2, TestTube, Server, Users, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { settingsApi } from '../services/settingsApi';
+import { Plus, Edit, Trash2, TestTube, Server, Users, CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -17,6 +19,21 @@ export default function RoutersPage() {
   const { data: routers, isLoading } = useQuery({
     queryKey: ['routers'],
     queryFn: () => routerApi.getAll().then(res => res.data.data),
+  });
+
+  const { data: mockModeData, isLoading: mockModeLoading } = useQuery({
+    queryKey: ['mikrotikMockMode'],
+    queryFn: () => settingsApi.getMikrotikMockMode().then(res => res.data.data),
+  });
+
+  const toggleMockModeMutation = useMutation({
+    mutationFn: (enabled) => settingsApi.setMikrotikMockMode(enabled),
+    onSuccess: (res) => {
+      const newMode = res.data.data.mockMode;
+      queryClient.setQueryData(['mikrotikMockMode'], { mockMode: newMode });
+      toast.success(newMode ? 'Mock Mode enabled' : 'Mock Mode disabled - connecting to real routers');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to toggle mock mode'),
   });
 
   const deleteMutation = useMutation({
@@ -57,6 +74,21 @@ export default function RoutersPage() {
     }
   };
 
+  const handleToggleMockMode = () => {
+    const currentMode = mockModeData?.mockMode ?? true;
+    const newMode = !currentMode;
+    
+    if (!newMode) {
+      if (!window.confirm('Disable Mock Mode? This will connect to REAL MikroTik routers. Ensure your routers are configured correctly.')) {
+        return;
+      }
+    }
+    
+    toggleMockModeMutation.mutate(newMode);
+  };
+
+  const isMockMode = mockModeData?.mockMode ?? true;
+
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Header */}
@@ -69,6 +101,52 @@ export default function RoutersPage() {
           <Plus className="w-4 h-4" />
           <span>Add Router</span>
         </Button>
+      </div>
+
+      {/* Mock Mode Toggle */}
+      <div className={`rounded-xl border p-4 ${isMockMode ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            {isMockMode ? (
+              <AlertTriangle className="w-6 h-6 text-amber-600" />
+            ) : (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            )}
+            <div>
+              <h3 className={`font-semibold ${isMockMode ? 'text-amber-900' : 'text-green-900'}`}>
+                MikroTik {isMockMode ? 'Mock Mode' : 'Live Mode'}
+              </h3>
+              <p className={`text-sm ${isMockMode ? 'text-amber-700' : 'text-green-700'}`}>
+                {isMockMode 
+                  ? 'Simulating router operations without connecting to real hardware'
+                  : 'Connected to real MikroTik routers via RouterOS API'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleMockMode}
+            disabled={toggleMockModeMutation.isPending || mockModeLoading}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              isMockMode 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-amber-600 hover:bg-amber-700 text-white'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {toggleMockModeMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isMockMode ? (
+              <>
+                <ToggleRight className="w-5 h-5" />
+                <span>Enable Live Mode</span>
+              </>
+            ) : (
+              <>
+                <ToggleLeft className="w-5 h-5" />
+                <span>Enable Mock Mode</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Routers Grid */}

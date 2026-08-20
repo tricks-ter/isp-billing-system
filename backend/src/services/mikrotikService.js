@@ -1,16 +1,26 @@
+// FILE: ./backend/src/services/mikrotikService.js
 const RouterOSAPI = require('routeros-api');
 const fs = require('fs').promises;
 const path = require('path');
+const settingsService = require('./settingsService');
 
 class MikroTikService {
   constructor() {
-    // Initialize from env, but can be changed at runtime
     this.mockMode = process.env.MIKROTIK_MOCK_MODE === 'true';
     this.logFile = path.join(__dirname, '../../logs/mikrotik-operations.log');
     fs.mkdir(path.dirname(this.logFile), { recursive: true }).catch(() => {});
   }
 
-  // --- Mock Mode Toggling ---
+  async initializeMockMode() {
+    try {
+      const dbMockMode = await settingsService.getMikrotikMockMode();
+      this.mockMode = dbMockMode;
+      console.log(`[MikroTik Service] Mock Mode initialized from DB: ${this.mockMode}`);
+    } catch (error) {
+      console.log('[MikroTik Service] Using env variable for Mock Mode:', this.mockMode);
+    }
+  }
+
   setMockMode(isMock) {
     this.mockMode = isMock;
     console.log(`[MikroTik Service] Mock Mode set to: ${this.mockMode}`);
@@ -21,7 +31,6 @@ class MikroTikService {
     return this.mockMode;
   }
 
-  // --- Logging ---
   async log(operation, params, result) {
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ${operation} | Params: ${JSON.stringify(params)} | Result: ${JSON.stringify(result)}\n`;
@@ -32,10 +41,8 @@ class MikroTikService {
     }
   }
 
-  // --- Connection Helper ---
   async connectToRouter(router) {
     if (this.mockMode) return { mock: true, router };
-
     try {
       const api = new RouterOSAPI({
         host: router.ipAddress,
@@ -44,7 +51,6 @@ class MikroTikService {
         port: router.apiPort || 8728,
         timeout: 5000,
       });
-
       await api.connect();
       return api;
     } catch (error) {
@@ -58,18 +64,14 @@ class MikroTikService {
     }
   }
 
-  // --- CRUD Operations ---
-
   async addPppoeSecret(router, username, password, profile) {
     const params = { username, password, profile, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE secret created' };
       await this.log('ADD_PPPOE_SECRET', params, result);
       console.log(`[MOCK] Added PPPoE: ${username}`);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       await api.write('/ppp/secret/add', [
@@ -79,7 +81,6 @@ class MikroTikService {
         `=profile=${profile}`,
       ]);
       await this.disconnect(api);
-      
       const result = { success: true };
       await this.log('ADD_PPPOE_SECRET', params, result);
       return result;
@@ -91,22 +92,17 @@ class MikroTikService {
 
   async disablePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE disabled' };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
-      
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=yes']);
       await this.disconnect(api);
-
       const result = { success: true };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
       return result;
@@ -118,22 +114,17 @@ class MikroTikService {
 
   async enablePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE enabled' };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
-      
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=no']);
       await this.disconnect(api);
-
       const result = { success: true };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
       return result;
@@ -145,22 +136,17 @@ class MikroTikService {
 
   async removePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE removed' };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) throw new Error(`PPPoE secret not found: ${username}`);
-      
       await api.write('/ppp/secret/remove', [`.id=${secrets[0]['.id']}`]);
       await this.disconnect(api);
-
       const result = { success: true };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
       return result;
@@ -169,8 +155,6 @@ class MikroTikService {
       throw new Error(`Failed to remove PPPoE: ${error.message}`);
     }
   }
-
-  // --- Real World Features ---
 
   async testConnection(router) {
     if (this.mockMode) {
@@ -181,17 +165,11 @@ class MikroTikService {
         data: { identity: `${router.name} (Mock)`, version: '7.15 (Mock)', uptime: 'N/A' }
       };
     }
-
     try {
       const api = await this.connectToRouter(router);
-      
-      // Fetch Identity
       const identity = await api.write('/system/identity/print');
-      // Fetch Resource (Version/Uptime)
       const resource = await api.write('/system/resource/print');
-      
       await this.disconnect(api);
-
       return {
         success: true,
         mock: false,
@@ -213,27 +191,12 @@ class MikroTikService {
     }
   }
 
-  async getActiveSessions() {
-    if (this.mockMode) {
-      return []; // Return empty or mock data if needed
-    }
-
-    // Note: To get ALL active sessions, we need to query ALL routers.
-    // This method expects an array of routers to query.
-    // For simplicity in this service, we will query a specific router if passed, 
-    // or we can handle it in routerService.
-    return []; 
-  }
-
   async getRouterActiveSessions(router) {
     if (this.mockMode) return [];
-
     try {
       const api = await this.connectToRouter(router);
       const sessions = await api.write('/ppp/active/print');
       await this.disconnect(api);
-      
-      // sessions is an array of objects: [{'.id': '...', 'name': 'user1', 'address': '10.0.0.1', 'uptime': '00:10:00', ...}]
       return sessions.map(s => ({
         id: s['.id'],
         username: s.name,
@@ -249,4 +212,7 @@ class MikroTikService {
   }
 }
 
-module.exports = new MikroTikService();
+const mikrotikService = new MikroTikService();
+mikrotikService.initializeMockMode();
+
+module.exports = mikrotikService;
