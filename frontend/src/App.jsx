@@ -7,6 +7,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import DashboardPage from './pages/DashboardPage';
 import CustomersPage from './pages/CustomersPage';
 import PackagesPage from './pages/PackagesPage';
+import BillingPage from './pages/BillingPage';
+import PaymentsPage from './pages/PaymentsPage';
+import ReportsPage from './pages/ReportsPage';
+import RoutersPage from './pages/RoutersPage';
+import LiveStatusPage from './pages/LiveStatusPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,19 +34,19 @@ function App() {
           }}
         />
         <Routes>
-          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
-
-          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/customers" element={<CustomersPage />} />
               <Route path="/packages" element={<PackagesPage />} />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/payments" element={<PaymentsPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/routers" element={<RoutersPage />} />
+              <Route path="/live-status" element={<LiveStatusPage />} />
             </Route>
           </Route>
-
-          {/* Default redirect */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

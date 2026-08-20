@@ -56,3 +56,56 @@ All wrapped in try/catch. Router unreachable = log error, don't crash.
 - `mikrotikService.js`: Handles all MikroTik RouterOS API operations (mock + real)
 - `customerService.js`: Customer CRUD + suspend/restore with MikroTik integration
 - `packageService.js`: Package CRUD with customer count validation
+
+## 9. Billing & Payment Services (Phase 4)
+
+### InvoiceService
+- `generateMonthlyInvoices(month, userId, routerId)` - Generates invoices for all ACTIVE customers
+- `getAllInvoices(page, limit, filters)` - List with pagination and filters
+- `getInvoiceById(id)` - Get with customer and payment details
+- `getMonthlySummary(month)` - Aggregated monthly stats
+
+### PaymentService
+- `recordPayment(data, userId)` - Record payment, update invoice status, auto-restore suspended customers
+- `getAllPayments(page, limit, filters)` - List with date range filters
+- `getDailyCollection(date)` - Daily collection breakdown by method
+
+### SmsService (Mock Mode)
+- `sendSms(phone, message)` - Logs SMS to file in mock mode
+- `sendDueReminders()` - Sends Bengali reminder SMS to due customers
+
+### New API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/invoices | JWT | List invoices |
+| GET | /api/invoices/summary | JWT | Monthly summary |
+| GET | /api/invoices/:id | JWT | Invoice details |
+| POST | /api/invoices/generate | JWT+ADMIN | Generate monthly |
+| GET | /api/payments | JWT | List payments |
+| GET | /api/payments/daily | JWT | Daily collection |
+| POST | /api/payments | JWT | Record payment |
+
+## 10. Router Management (Phase 5)
+
+### RouterService
+- `getAllRouters()` - List all routers with customer counts
+- `createRouter(data, userId)` - Add new MikroTik router
+- `updateRouter(id, data, userId)` - Update router config
+- `deleteRouter(id, userId)` - Delete (only if no customers assigned)
+- `testConnection(id)` - Test API connectivity to router
+- `getLiveStatus()` - Get real-time online/offline status
+- `bulkSuspend(customerIds, userId)` - Suspend multiple customers
+- `bulkRestore(customerIds, userId)` - Restore multiple customers
+
+### New API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/routers | JWT | List routers |
+| GET | /api/routers/live-status | JWT | Live customer status |
+| GET | /api/routers/:id | JWT | Router details |
+| POST | /api/routers | JWT+ADMIN | Add router |
+| PUT | /api/routers/:id | JWT+ADMIN | Update router |
+| DELETE | /api/routers/:id | JWT+ADMIN | Delete router |
+| POST | /api/routers/:id/test | JWT | Test connection |
+| POST | /api/routers/bulk/suspend | JWT+ADMIN | Bulk suspend |
+| POST | /api/routers/bulk/restore | JWT+ADMIN | Bulk restore |

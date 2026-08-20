@@ -66,6 +66,9 @@ class CustomerService {
     const pppoeUsername = data.pppoeUsername || `pppoe_${uuidv4().slice(0, 8)}`;
     const pppoePassword = data.pppoePassword || uuidv4().slice(0, 12);
 
+    // Handle routerId: convert empty string to null
+    const routerId = data.routerId ? parseInt(data.routerId) : null;
+
     // Create customer in database
     const customer = await prisma.customer.create({
       data: {
@@ -76,8 +79,8 @@ class CustomerService {
         pppoeUsername,
         pppoePassword,
         status: 'ACTIVE',
-        packageId: data.packageId,
-        routerId: data.routerId || null,
+        packageId: parseInt(data.packageId),
+        routerId: routerId,
         joinDate: new Date(),
       },
       include: {
@@ -87,23 +90,17 @@ class CustomerService {
     });
 
     // If router is assigned, create PPPoE secret on MikroTik
-    if (data.routerId) {
-      const router = await prisma.router.findUnique({
-        where: { id: data.routerId },
-      });
-
-      if (router) {
-        try {
-          await mikrotikService.addPppoeSecret(
-            router,
-            pppoeUsername,
-            pppoePassword,
-            data.package.name // Use package name as profile
-          );
-        } catch (error) {
-          // Log error but don't fail customer creation
-          console.error('Failed to create PPPoE secret on router:', error);
-        }
+    if (routerId && customer.router) {
+      try {
+        await mikrotikService.addPppoeSecret(
+          customer.router,
+          pppoeUsername,
+          pppoePassword,
+          customer.package.name
+        );
+      } catch (error) {
+        console.error('Failed to create PPPoE secret on router:', error);
+        // Don't fail customer creation, just log the error
       }
     }
 
@@ -112,7 +109,11 @@ class CustomerService {
       data: {
         userId,
         action: 'CREATE_CUSTOMER',
-        details: JSON.stringify({ customerId: customer.id, name: customer.name }),
+        details: JSON.stringify({ 
+          customerId: customer.id, 
+          name: customer.name,
+          routerId: routerId 
+        }),
       },
     });
 
@@ -129,6 +130,9 @@ class CustomerService {
       throw new Error('Customer not found');
     }
 
+    // Handle routerId: convert empty string to null
+    const newRouterId = data.routerId ? parseInt(data.routerId) : null;
+
     // Update customer in database
     const updatedCustomer = await prisma.customer.update({
       where: { id: parseInt(id) },
@@ -137,8 +141,8 @@ class CustomerService {
         phone: data.phone,
         address: data.address,
         area: data.area,
-        packageId: data.packageId,
-        routerId: data.routerId || null,
+        packageId: parseInt(data.packageId),
+        routerId: newRouterId,
       },
       include: {
         package: true,
@@ -146,24 +150,31 @@ class CustomerService {
       },
     });
 
-    // If package changed and router is assigned, update PPPoE profile
-    if (data.packageId !== customer.packageId && customer.routerId) {
-      const router = await prisma.router.findUnique({
-        where: { id: customer.routerId },
-      });
+    // If router changed or package changed, update PPPoE on router
+    if (customer.routerId || newRouterId) {
+      const oldRouter = customer.router;
+      const newRouter = updatedCustomer.router;
 
-      if (router) {
+      // Remove from old router if it changed
+      if (oldRouter && oldRouter.id !== newRouterId) {
         try {
-          // Remove old secret and add new one with updated profile
-          await mikrotikService.removePppoeSecret(router, customer.pppoeUsername);
+          await mikrotikService.removePppoeSecret(oldRouter, customer.pppoeUsername);
+        } catch (error) {
+          console.error('Failed to remove from old router:', error);
+        }
+      }
+
+      // Add to new router
+      if (newRouter) {
+        try {
           await mikrotikService.addPppoeSecret(
-            router,
+            newRouter,
             customer.pppoeUsername,
             customer.pppoePassword,
             updatedCustomer.package.name
           );
         } catch (error) {
-          console.error('Failed to update PPPoE secret on router:', error);
+          console.error('Failed to add to new router:', error);
         }
       }
     }
@@ -173,7 +184,11 @@ class CustomerService {
       data: {
         userId,
         action: 'UPDATE_CUSTOMER',
-        details: JSON.stringify({ customerId: updatedCustomer.id, changes: data }),
+        details: JSON.stringify({ 
+          customerId: updatedCustomer.id, 
+          changes: data,
+          routerChanged: customer.routerId !== newRouterId 
+        }),
       },
     });
 
@@ -242,7 +257,6 @@ class CustomerService {
         await mikrotikService.disablePppoeSecret(customer.router, customer.pppoeUsername);
       } catch (error) {
         console.error('Failed to disable PPPoE on router:', error);
-        // Don't fail the operation, just log the error
       }
     }
 

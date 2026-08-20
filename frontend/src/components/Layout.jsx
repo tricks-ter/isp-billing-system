@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, CreditCard, Wifi, Router,
-  Settings, LogOut, Menu, X, ChevronDown, Bell
+  LayoutDashboard, Users, CreditCard, Wifi, Receipt,
+  BarChart3, Settings, LogOut, Menu, X, Bell, Server, Zap
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -10,9 +10,12 @@ import toast from 'react-hot-toast';
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/customers', icon: Users, label: 'Customers' },
-  { to: '/billing', icon: CreditCard, label: 'Billing' },
   { to: '/packages', icon: Wifi, label: 'Packages' },
-  { to: '/routers', icon: Router, label: 'Routers' },
+  { to: '/billing', icon: CreditCard, label: 'Billing' },
+  { to: '/payments', icon: Receipt, label: 'Payments' },
+  { to: '/routers', icon: Server, label: 'Routers' },
+  { to: '/live-status', icon: Zap, label: 'Live Status' },
+  { to: '/reports', icon: BarChart3, label: 'Reports' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
@@ -20,6 +23,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -27,89 +31,141 @@ export default function Layout() {
     navigate('/login');
   };
 
+  const currentPageTitle = navItems.find(item => item.to === location.pathname)?.label || 'Dashboard';
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200
+        fixed lg:sticky inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        flex flex-col h-screen
       `}>
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200">
-          <div className="flex items-center space-x-2">
-            <Wifi className="w-7 h-7 text-primary" />
-            <span className="text-lg font-bold text-slate-900">ISP Billing</span>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 flex-shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-sm">
+              <Wifi className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-slate-900">ISP Billing</span>
+              <p className="text-[10px] text-slate-500 -mt-1">Management System</p>
+            </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400">
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-1">
-          {navItems.map((item) => (
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Main Menu</p>
+          {navItems.slice(0, 6).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
+                `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
                 ${isActive
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-primary text-white shadow-sm shadow-primary/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`
               }
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 mt-4">Network</p>
+          {navItems.slice(6, 8).map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+                ${isActive
+                  ? 'bg-primary text-white shadow-sm shadow-primary/20'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 mt-4">System</p>
+          {navItems.slice(8).map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+                ${isActive
+                  ? 'bg-primary text-white shadow-sm shadow-primary/20'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5 flex-shrink-0" />
               <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
 
-        {/* User Info at Bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200">
-          <div className="flex items-center space-x-3 px-2">
-            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+        {/* User Info */}
+        <div className="p-4 border-t border-slate-200 flex-shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm">
               {user?.fullName?.charAt(0) || 'A'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-900 truncate">{user?.fullName}</p>
-              <p className="text-xs text-slate-500">{user?.role}</p>
+              <p className="text-xs text-slate-500 capitalize">{user?.role?.toLowerCase()}</p>
             </div>
-            <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 transition-colors" title="Logout">
-              <LogOut className="w-5 h-5" />
+            <button
+              onClick={handleLogout}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-slate-600 hover:text-slate-900"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="hidden lg:block">
-            <h2 className="text-lg font-semibold text-slate-900">Welcome back, {user?.fullName?.split(' ')[0]}</h2>
-          </div>
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 flex-shrink-0">
           <div className="flex items-center space-x-3">
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-semibold text-slate-900">{currentPageTitle}</h1>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
             </button>
           </div>
         </header>

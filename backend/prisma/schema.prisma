@@ -18,6 +18,10 @@ model User {
   updatedAt DateTime   @updatedAt
   auditLogs AuditLog[]
   payments  Payment[]
+  staff     Staff?
+  notifications Notification[]
+  incomes   Income[]
+  expenses  Expense[]
 }
 
 enum Role {
@@ -109,4 +113,56 @@ model AuditLog {
 
   @@index([userId])
   @@index([action])
+}
+
+model Staff {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String?
+  address   String?
+  joinDate  DateTime   @default(now())
+  salary    Float?
+  isActive  Boolean    @default(true)
+}
+
+model Income {
+  id          Int      @id @default(autoincrement())
+  category    String
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  recordedBy  Int
+  recorder    User     @relation(fields: [recordedBy], references: [id])
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  category    String
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  recordedBy  Int
+  recorder    User     @relation(fields: [recordedBy], references: [id])
+  billUrl     String?
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

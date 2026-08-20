@@ -7,3 +7,28 @@
     @apply bg-background text-slate-800 antialiased;
   }
 }
+
+/* Print Styles */
+@media print {
+  body {
+    background: white !important;
+  }
+  
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  aside, header, nav, button, .no-print {
+    display: none !important;
+  }
+  
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+}

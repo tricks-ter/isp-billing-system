@@ -51,3 +51,43 @@
 - Real-time data updates via React Query
 - Toast notifications for all actions
 - Form validation with error messages
+
+## 8. Phase 4 Pages
+| Route | Component | Description |
+|-------|-----------|-------------|
+| /billing | BillingPage.jsx | Invoice list, generate, collect payments |
+| /payments | PaymentsPage.jsx | Payment history with filters |
+| /reports | ReportsPage.jsx | Daily & monthly reports |
+
+## 9. Phase 4 Components
+- `GenerateInvoiceForm.jsx` - Month picker for invoice generation
+- `PaymentForm.jsx` - Payment recording with method selector
+- `InvoiceDetailsModal.jsx` - Printable invoice/receipt
+
+## 10. Mobile Optimization (Phase 4)
+- **Responsive Tables**: Desktop shows tables, mobile shows cards
+- **Touch Targets**: All buttons min 44x44px on mobile
+- **Spacing**: Reduced padding on mobile (`p-3 lg:p-4`)
+- **Typography**: Smaller text on mobile, scales up on desktop
+- **Filters**: Stack vertically on mobile, horizontal on desktop
+- **Print Styles**: Hidden UI elements during receipt printing
+- **Sidebar**: Slide-in drawer on mobile, fixed on desktop
+
+## 11. Phase 5 Pages
+| Route | Component | Description |
+|-------|-----------|-------------|
+| /routers | RoutersPage.jsx | Router CRUD with connection testing |
+| /live-status | LiveStatusPage.jsx | Real-time customer status with bulk ops |
+
+## 12. Phase 5 Components
+- `RouterForm.jsx` - Router configuration form with validation
+- Live status table with checkbox selection
+- Bulk action buttons (suspend/restore)
+
+## 13. UI Optimization (Phase 5)
+- Dashboard: Real charts with Recharts (Area + Pie)
+- Removed duplicate headings
+- Improved stat cards with trend indicators
+- Better sidebar with grouped navigation
+- Welcome header with date display
+- Activity feed with icons
