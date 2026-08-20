@@ -71,8 +71,8 @@ app.use((err, req, res, next) => {
 
 // --- Start Server ---
 app.listen(PORT, () => {
-  console.log(\`🚀 ISP Billing API running on http://localhost:\${PORT}\`);
-  console.log(\`📊 Health check: http://localhost:\${PORT}/api/health\`);
-  console.log(\`🔧 MikroTik Mock Mode: \${process.env.MIKROTIK_MOCK_MODE === 'true' ? 'ENABLED' : 'DISABLED'}\`);
-  console.log(\`📱 SMS Mock Mode: \${process.env.SMS_MOCK_MODE !== 'false' ? 'ENABLED' : 'DISABLED'}\`);
+  console.log(`🚀 ISP Billing API running on http://localhost:${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔧 MikroTik Mock Mode: ${process.env.MIKROTIK_MOCK_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`📱 SMS Mock Mode: ${process.env.SMS_MOCK_MODE !== 'false' ? 'ENABLED' : 'DISABLED'}`);
 });
