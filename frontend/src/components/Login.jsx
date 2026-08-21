@@ -1,5 +1,5 @@
-// FILE: ./frontend/src/components/Login.jsx
-import { useForm } from 'react-hook-form';
+// frontend/src/components/Login.jsx
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
@@ -21,7 +21,7 @@ export default function Login() {
   const login = useAuthStore((state) => state.login);
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm({
@@ -62,12 +62,18 @@ export default function Login() {
             <label className="text-sm font-medium text-slate-700">Username</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                {...register('username')}
-                type="text"
-                autoComplete="username"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                placeholder="admin"
+              <Controller
+                name="username"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="text"
+                    autoComplete="username"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    placeholder="admin"
+                  />
+                )}
               />
             </div>
             {errors.username && (
@@ -80,12 +86,18 @@ export default function Login() {
             <label className="text-sm font-medium text-slate-700">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                {...register('password')}
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                placeholder="••••••••"
+              <Controller
+                name="password"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    placeholder="••••••••"
+                  />
+                )}
               />
               <button
                 type="button"
