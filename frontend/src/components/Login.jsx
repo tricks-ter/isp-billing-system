@@ -1,10 +1,8 @@
 // frontend/src/components/Login.jsx
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Wifi, Loader2 } from 'lucide-react';
+import { z } from 'zod';
 import { authApi } from '../services/authApi';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -17,22 +15,36 @@ const loginSchema = z.object({
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [errors, setErrors] = useState({ username: '', password: '' });
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { username: '', password: '' },
-  });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error for that field when user types
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
 
-  const onSubmit = async (data) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setIsLoading(true);
+
+    // Validate using Zod
+    const result = loginSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors = {};
+      result.error.errors.forEach((err) => {
+        fieldErrors[err.path[0]] = err.message;
+      });
+      setErrors(fieldErrors);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await authApi.login(data);
+      const response = await authApi.login(formData);
       const { token, user } = response.data.data;
       login(user, token);
       toast.success(`Welcome back, ${user.fullName}!`);
@@ -56,28 +68,24 @@ export default function Login() {
           <p className="text-sm text-slate-500">Sign in to manage your network</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Username */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Username</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <Controller
+              <input
                 name="username"
-                control={control}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type="text"
-                    autoComplete="username"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                    placeholder="admin"
-                  />
-                )}
+                type="text"
+                autoComplete="username"
+                value={formData.username}
+                onChange={handleChange}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                placeholder="admin"
               />
             </div>
             {errors.username && (
-              <p className="text-xs text-red-500">{errors.username.message}</p>
+              <p className="text-xs text-red-500">{errors.username}</p>
             )}
           </div>
 
@@ -86,18 +94,14 @@ export default function Login() {
             <label className="text-sm font-medium text-slate-700">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <Controller
+              <input
                 name="password"
-                control={control}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                    placeholder="••••••••"
-                  />
-                )}
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                placeholder="••••••••"
               />
               <button
                 type="button"
@@ -109,7 +113,7 @@ export default function Login() {
               </button>
             </div>
             {errors.password && (
-              <p className="text-xs text-red-500">{errors.password.message}</p>
+              <p className="text-xs text-red-500">{errors.password}</p>
             )}
           </div>
 
