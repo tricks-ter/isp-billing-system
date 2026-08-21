@@ -1,4 +1,3 @@
-// frontend/src/pages/RoutersPage.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,7 +6,7 @@ import { settingsApi } from '../services/settingsApi';
 import {
   Plus, Edit, Trash2, TestTube, Server, Users,
   CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight,
-  AlertTriangle, Eye
+  AlertTriangle, Eye, RefreshCw
 } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
@@ -22,9 +21,10 @@ export default function RoutersPage() {
   const [testingId, setTestingId] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: routers, isLoading } = useQuery({
+  const { data: routers, isLoading, refetch } = useQuery({
     queryKey: ['routers'],
     queryFn: () => routerApi.getAll().then(res => res.data.data),
+    staleTime: 60000,
   });
 
   const { data: mockModeData, isLoading: mockModeLoading } = useQuery({
@@ -56,12 +56,15 @@ export default function RoutersPage() {
     onSuccess: (res) => {
       const { success, data } = res.data;
       if (success) {
-        toast.success(data.message);
+        toast.success(data.message || 'Connection successful');
       } else {
-        toast.error(data.message);
+        toast.error(data.message || 'Connection failed');
       }
     },
-    onError: () => toast.error('Connection test failed'),
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Connection test failed';
+      toast.error(message);
+    },
     onSettled: () => setTestingId(null),
   });
 
@@ -95,19 +98,23 @@ export default function RoutersPage() {
 
   return (
     <div className="space-y-4 lg:space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Routers</h1>
           <p className="text-sm text-slate-500 mt-1">Manage MikroTik router connections</p>
         </div>
-        <Button onClick={() => { setEditingRouter(null); setIsFormOpen(true); }}>
-          <Plus className="w-4 h-4" />
-          <span>Add Router</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+          <Button onClick={() => { setEditingRouter(null); setIsFormOpen(true); }}>
+            <Plus className="w-4 h-4" />
+            <span>Add Router</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Mock Mode Toggle */}
       <div className={`rounded-xl border p-4 ${isMockMode ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -153,7 +160,21 @@ export default function RoutersPage() {
         </div>
       </div>
 
-      {/* Routers Grid */}
+      {isMockMode && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-semibold text-blue-900 mb-2">💡 Important Note</h3>
+          <p className="text-sm text-blue-800">
+            Your backend is deployed on Render (cloud) and cannot reach local network routers (10.120.6.1). 
+            For production use, you need to either:
+          </p>
+          <ul className="text-sm text-blue-800 mt-2 ml-4 list-disc">
+            <li>Deploy the backend on a server that can access your local network</li>
+            <li>Set up a VPN tunnel between Render and your local network</li>
+            <li>Use a public IP or domain for your MikroTik router</li>
+          </ul>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {isLoading ? (
           <div className="col-span-full text-center py-12 text-slate-500">Loading...</div>
@@ -237,7 +258,6 @@ export default function RoutersPage() {
         )}
       </div>
 
-      {/* Form Modal */}
       <Modal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}

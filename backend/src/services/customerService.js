@@ -5,7 +5,6 @@ const { v4: uuidv4 } = require('uuid');
 class CustomerService {
   async getAllCustomers(page = 1, limit = 20, search = '') {
     const skip = (page - 1) * limit;
-    
     const where = search
       ? {
           OR: [
@@ -53,11 +52,9 @@ class CustomerService {
         },
       },
     });
-
     if (!customer) {
       throw new Error('Customer not found');
     }
-
     return customer;
   }
 
@@ -89,19 +86,17 @@ class CustomerService {
       },
     });
 
-    // If router is assigned, create PPPoE secret on MikroTik
+    // If router is assigned, initiate PPPoE secret creation (NON-BLOCKING)
     if (routerId && customer.router) {
-      try {
-        await mikrotikService.addPppoeSecret(
-          customer.router,
-          pppoeUsername,
-          pppoePassword,
-          customer.package.name
-        );
-      } catch (error) {
-        console.error('Failed to create PPPoE secret on router:', error);
-        // Don't fail customer creation, just log the error
-      }
+      // Fire and forget - don't await
+      mikrotikService.addPppoeSecret(
+        customer.router,
+        pppoeUsername,
+        pppoePassword,
+        customer.package.name
+      ).catch(error => {
+        console.error('Failed to create PPPoE secret on router:', error.message);
+      });
     }
 
     // Log the action
@@ -109,10 +104,10 @@ class CustomerService {
       data: {
         userId,
         action: 'CREATE_CUSTOMER',
-        details: JSON.stringify({ 
-          customerId: customer.id, 
+        details: JSON.stringify({
+          customerId: customer.id,
           name: customer.name,
-          routerId: routerId 
+          routerId: routerId
         }),
       },
     });
@@ -125,7 +120,6 @@ class CustomerService {
       where: { id: parseInt(id) },
       include: { package: true, router: true },
     });
-
     if (!customer) {
       throw new Error('Customer not found');
     }
@@ -150,32 +144,25 @@ class CustomerService {
       },
     });
 
-    // If router changed or package changed, update PPPoE on router
+    // If router changed or package changed, update PPPoE on router (NON-BLOCKING)
     if (customer.routerId || newRouterId) {
       const oldRouter = customer.router;
       const newRouter = updatedCustomer.router;
 
       // Remove from old router if it changed
       if (oldRouter && oldRouter.id !== newRouterId) {
-        try {
-          await mikrotikService.removePppoeSecret(oldRouter, customer.pppoeUsername);
-        } catch (error) {
-          console.error('Failed to remove from old router:', error);
-        }
+        mikrotikService.removePppoeSecret(oldRouter, customer.pppoeUsername)
+          .catch(error => console.error('Failed to remove from old router:', error.message));
       }
 
       // Add to new router
       if (newRouter) {
-        try {
-          await mikrotikService.addPppoeSecret(
-            newRouter,
-            customer.pppoeUsername,
-            customer.pppoePassword,
-            updatedCustomer.package.name
-          );
-        } catch (error) {
-          console.error('Failed to add to new router:', error);
-        }
+        mikrotikService.addPppoeSecret(
+          newRouter,
+          customer.pppoeUsername,
+          customer.pppoePassword,
+          updatedCustomer.package.name
+        ).catch(error => console.error('Failed to add to new router:', error.message));
       }
     }
 
@@ -184,10 +171,10 @@ class CustomerService {
       data: {
         userId,
         action: 'UPDATE_CUSTOMER',
-        details: JSON.stringify({ 
-          customerId: updatedCustomer.id, 
+        details: JSON.stringify({
+          customerId: updatedCustomer.id,
           changes: data,
-          routerChanged: customer.routerId !== newRouterId 
+          routerChanged: customer.routerId !== newRouterId
         }),
       },
     });
@@ -200,18 +187,14 @@ class CustomerService {
       where: { id: parseInt(id) },
       include: { router: true },
     });
-
     if (!customer) {
       throw new Error('Customer not found');
     }
 
-    // Remove PPPoE secret from router if assigned
+    // Remove PPPoE secret from router if assigned (NON-BLOCKING)
     if (customer.routerId && customer.router) {
-      try {
-        await mikrotikService.removePppoeSecret(customer.router, customer.pppoeUsername);
-      } catch (error) {
-        console.error('Failed to remove PPPoE secret from router:', error);
-      }
+      mikrotikService.removePppoeSecret(customer.router, customer.pppoeUsername)
+        .catch(error => console.error('Failed to remove PPPoE secret from router:', error.message));
     }
 
     // Delete customer from database
@@ -236,11 +219,9 @@ class CustomerService {
       where: { id: parseInt(id) },
       include: { router: true },
     });
-
     if (!customer) {
       throw new Error('Customer not found');
     }
-
     if (customer.status === 'SUSPENDED') {
       throw new Error('Customer is already suspended');
     }
@@ -251,13 +232,10 @@ class CustomerService {
       data: { status: 'SUSPENDED' },
     });
 
-    // Disable PPPoE on router if assigned
+    // Disable PPPoE on router if assigned (NON-BLOCKING)
     if (customer.routerId && customer.router) {
-      try {
-        await mikrotikService.disablePppoeSecret(customer.router, customer.pppoeUsername);
-      } catch (error) {
-        console.error('Failed to disable PPPoE on router:', error);
-      }
+      mikrotikService.disablePppoeSecret(customer.router, customer.pppoeUsername)
+        .catch(error => console.error('Failed to disable PPPoE on router:', error.message));
     }
 
     // Log the action
@@ -277,11 +255,9 @@ class CustomerService {
       where: { id: parseInt(id) },
       include: { router: true },
     });
-
     if (!customer) {
       throw new Error('Customer not found');
     }
-
     if (customer.status === 'ACTIVE') {
       throw new Error('Customer is already active');
     }
@@ -292,13 +268,10 @@ class CustomerService {
       data: { status: 'ACTIVE' },
     });
 
-    // Enable PPPoE on router if assigned
+    // Enable PPPoE on router if assigned (NON-BLOCKING)
     if (customer.routerId && customer.router) {
-      try {
-        await mikrotikService.enablePppoeSecret(customer.router, customer.pppoeUsername);
-      } catch (error) {
-        console.error('Failed to enable PPPoE on router:', error);
-      }
+      mikrotikService.enablePppoeSecret(customer.router, customer.pppoeUsername)
+        .catch(error => console.error('Failed to enable PPPoE on router:', error.message));
     }
 
     // Log the action

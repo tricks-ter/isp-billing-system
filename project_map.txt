@@ -106,6 +106,7 @@
 │   │   │   ├── PackagesPage.jsx
 │   │   │   ├── PaymentsPage.jsx
 │   │   │   ├── ReportsPage.jsx
+│   │   │   ├── RouterDetailPage.jsx
 │   │   │   ├── RoutersPage.jsx
 │   │   │   ├── SettingsPage.jsx
 │   │   │   └── UsersPage.jsx
@@ -126,6 +127,7 @@
 │   │   ├── store
 │   │   │   └── authStore.js
 │   │   ├── utils
+│   │   │   └── export.js
 │   │   ├── App.css
 │   │   ├── App.jsx
 │   │   ├── index.css
@@ -143,7 +145,7 @@
 ├── project_map.txt
 └── README.md
 
-26 directories, 115 files
+26 directories, 117 files
 
 =========================================
 2. COMPLETE FILE LIST (LOCATIONS)
@@ -241,6 +243,7 @@
 ./frontend/src/pages/PackagesPage.jsx
 ./frontend/src/pages/PaymentsPage.jsx
 ./frontend/src/pages/ReportsPage.jsx
+./frontend/src/pages/RouterDetailPage.jsx
 ./frontend/src/pages/RoutersPage.jsx
 ./frontend/src/pages/SettingsPage.jsx
 ./frontend/src/pages/UsersPage.jsx
@@ -258,6 +261,7 @@
 ./frontend/src/services/settingsApi.js
 ./frontend/src/services/userApi.js
 ./frontend/src/store/authStore.js
+./frontend/src/utils/export.js
 ./frontend/tailwind.config.js
 ./frontend/vite.config.js
 ./generate_map.sh
@@ -291,6 +295,7 @@ FILE: ./backend/package.json
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^7.5.1",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
@@ -319,6 +324,7 @@ FILE: ./backend/package-lock.json
         "cors": "^2.8.6",
         "dotenv": "^17.4.2",
         "express": "^5.2.1",
+        "express-rate-limit": "^7.5.1",
         "helmet": "^8.3.0",
         "jsonwebtoken": "^9.0.3",
         "morgan": "^1.11.0",
@@ -871,6 +877,21 @@ FILE: ./backend/package-lock.json
       "funding": {
         "type": "opencollective",
         "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/express-rate-limit": {
+      "version": "7.5.1",
+      "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-7.5.1.tgz",
+      "integrity": "sha512-7iN8iPMDzOMHPUYllBEsQdWVB6fPDMPqwjBaFrgr4Jgr/+okjvzAy+UHlYYL/Vs0OsOrMkwS6PJDkFlJwoxUnw==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 16"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/express-rate-limit"
+      },
+      "peerDependencies": {
+        "express": ">= 4.11"
       }
     },
     "node_modules/exsolve": {
@@ -2668,7 +2689,9 @@ module.exports = new InvoiceController();
 -------------------------------------------------------------------
 FILE: ./backend/src/controllers/notificationController.js
 -------------------------------------------------------------------
+// backend/src/controllers/notificationController.js
 const notificationService = require('../services/notificationService');
+const smsService = require('../services/smsService'); // NEW
 
 class NotificationController {
   async getUnreadCount(req, res) {
@@ -2679,6 +2702,7 @@ class NotificationController {
       return res.status(500).json({ success: false, message: error.message });
     }
   }
+
   async getNotifications(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
@@ -2689,6 +2713,7 @@ class NotificationController {
       return res.status(500).json({ success: false, message: error.message });
     }
   }
+
   async markAsRead(req, res) {
     try {
       await notificationService.markAsRead(req.params.id, req.user.id);
@@ -2697,12 +2722,27 @@ class NotificationController {
       return res.status(400).json({ success: false, message: error.message });
     }
   }
+
   async markAllAsRead(req, res) {
     try {
       await notificationService.markAllAsRead(req.user.id);
       return res.status(200).json({ success: true });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // NEW: Send due reminders via SMS
+  async sendDueReminders(req, res) {
+    try {
+      const result = await smsService.sendDueReminders();
+      return res.status(200).json({
+        success: true,
+        data: result,
+        message: `Sent ${result.sent} reminders, ${result.failed} failed.`
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
     }
   }
 }
@@ -2815,7 +2855,7 @@ module.exports = new PaymentController();
 -------------------------------------------------------------------
 FILE: ./backend/src/controllers/routerController.js
 -------------------------------------------------------------------
-// FILE: ./backend/src/controllers/routerController.js
+// backend/src/controllers/routerController.js
 const routerService = require('../services/routerService');
 
 class RouterController {
@@ -2908,7 +2948,7 @@ class RouterController {
     }
   }
 
-  // NEW CONTROLLER METHODS
+  // --- Router Info ---
   async getRouterInfo(req, res) {
     try {
       const info = await routerService.getRouterInfo(req.params.id);
@@ -2918,10 +2958,15 @@ class RouterController {
     }
   }
 
-  async getPppoeSecrets(req, res) {
+  // --- PPPoE Secrets (paginated) ---
+  async getPppoeSecretsPaginated(req, res) {
     try {
-      const secrets = await routerService.getPppoeSecrets(req.params.id);
-      return res.status(200).json({ success: true, data: secrets });
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const search = req.query.search || '';
+      const status = req.query.status || '';
+      const result = await routerService.getPppoeSecretsPaginated(req.params.id, page, limit, search, status);
+      return res.status(200).json({ success: true, data: result });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -2954,6 +2999,79 @@ class RouterController {
     try {
       const result = await routerService.deletePppoeSecret(req.params.id, req.params.username);
       return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async togglePppoeSecret(req, res) {
+    try {
+      const { username } = req.params;
+      const { disable } = req.body;
+      if (typeof disable !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'disable must be boolean' });
+      }
+      const result = await routerService.togglePppoeSecret(req.params.id, username, disable);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // --- Active Sessions (paginated) ---
+  async getActiveSessionsPaginated(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const search = req.query.search || '';
+      const result = await routerService.getActiveSessionsPaginated(req.params.id, page, limit, search);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async removeActiveSession(req, res) {
+    try {
+      const { username } = req.params;
+      const result = await routerService.removeActiveSession(req.params.id, username);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // --- Profiles (paginated) ---
+  async getProfilesPaginated(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const search = req.query.search || '';
+      const result = await routerService.getProfilesPaginated(req.params.id, page, limit, search);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // --- Queues (paginated) ---
+  async getSimpleQueuesPaginated(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const search = req.query.search || '';
+      const result = await routerService.getSimpleQueuesPaginated(req.params.id, page, limit, search);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  // --- Legacy non-paginated endpoints (kept for backward compatibility) ---
+  async getPppoeSecrets(req, res) {
+    try {
+      const secrets = await routerService.getPppoeSecrets(req.params.id);
+      return res.status(200).json({ success: true, data: secrets });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -3114,12 +3232,13 @@ module.exports = new UserController();
 -------------------------------------------------------------------
 FILE: ./backend/src/index.js
 -------------------------------------------------------------------
-// FILE: ./backend/src/index.js
+// backend/src/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit'); // NEW
 
 // Import all route modules
 const authRoutes = require('./routes/authRoutes');
@@ -3128,22 +3247,30 @@ const packageRoutes = require('./routes/packageRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const routerRoutes = require('./routes/routerRoutes');
-
-// Phase 6: New auxiliary routes
 const userRoutes = require('./routes/userRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
-const settingsRoutes = require('./routes/settingsRoutes'); // <-- ADDED
+const settingsRoutes = require('./routes/settingsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// --- Rate Limiting (NEW) ---
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later.' },
+});
+app.use(limiter);
 
 // --- Middleware ---
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL || 'https://yourdomain.com'
+    ? process.env.FRONTEND_URL || 'https://yourdomain.com' ||'https://isp-billing-frontend-0f1m.onrender.com/login'||'https://isp-billing-frontend-0f1m.onrender.com/'
     : 'http://localhost:5173',
   credentials: true,
 }));
@@ -3157,13 +3284,11 @@ app.use('/api/packages', packageRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/routers', routerRoutes);
-
-// Phase 6: Register new auxiliary routes
 app.use('/api/users', userRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', settingsRoutes); // <-- ADDED
+app.use('/api/settings', settingsRoutes);
 
 // --- Health Check ---
 app.get('/api/health', (req, res) => {
@@ -3332,16 +3457,21 @@ module.exports = router;
 -------------------------------------------------------------------
 FILE: ./backend/src/routes/notificationRoutes.js
 -------------------------------------------------------------------
+// backend/src/routes/notificationRoutes.js
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
+
 router.get('/unread-count', notificationController.getUnreadCount);
 router.get('/', notificationController.getNotifications);
 router.post('/:id/read', notificationController.markAsRead);
 router.post('/mark-all-read', notificationController.markAllAsRead);
+
+// NEW: Send due reminders
+router.post('/send-reminders', notificationController.sendDueReminders);
 
 module.exports = router;
 -------------------------------------------------------------------
@@ -3390,7 +3520,7 @@ module.exports = router;
 -------------------------------------------------------------------
 FILE: ./backend/src/routes/routerRoutes.js
 -------------------------------------------------------------------
-// FILE: ./backend/src/routes/routerRoutes.js
+// backend/src/routes/routerRoutes.js
 const express = require('express');
 const router = express.Router();
 const routerController = require('../controllers/routerController');
@@ -3409,15 +3539,29 @@ router.post('/:id/test', routerController.testConnection);
 router.post('/bulk/suspend', roleMiddleware('ADMIN', 'MANAGER'), routerController.bulkSuspend);
 router.post('/bulk/restore', roleMiddleware('ADMIN', 'MANAGER'), routerController.bulkRestore);
 
-// NEW ROUTES FOR FULL MIKROTIK MANAGEMENT
+// --- Router Info ---
 router.get('/:id/info', routerController.getRouterInfo);
-router.get('/:id/pppoe-secrets', routerController.getPppoeSecrets);
+
+// --- PPPoE Secrets ---
+router.get('/:id/pppoe-secrets', routerController.getPppoeSecrets); // legacy
+router.get('/:id/pppoe-secrets/paginated', routerController.getPppoeSecretsPaginated);
 router.post('/:id/pppoe-secrets', roleMiddleware('ADMIN', 'MANAGER'), routerController.createPppoeSecret);
 router.put('/:id/pppoe-secrets/:username', roleMiddleware('ADMIN', 'MANAGER'), routerController.updatePppoeSecret);
 router.delete('/:id/pppoe-secrets/:username', roleMiddleware('ADMIN', 'MANAGER'), routerController.deletePppoeSecret);
-router.get('/:id/active-sessions', routerController.getActiveSessions);
-router.get('/:id/profiles', routerController.getProfiles);
-router.get('/:id/queues', routerController.getSimpleQueues);
+router.post('/:id/pppoe-secrets/:username/toggle', roleMiddleware('ADMIN', 'MANAGER'), routerController.togglePppoeSecret);
+
+// --- Active Sessions ---
+router.get('/:id/active-sessions', routerController.getActiveSessions); // legacy
+router.get('/:id/active-sessions/paginated', routerController.getActiveSessionsPaginated);
+router.delete('/:id/active-sessions/:username', roleMiddleware('ADMIN', 'MANAGER'), routerController.removeActiveSession);
+
+// --- Profiles ---
+router.get('/:id/profiles', routerController.getProfiles); // legacy
+router.get('/:id/profiles/paginated', routerController.getProfilesPaginated);
+
+// --- Queues ---
+router.get('/:id/queues', routerController.getSimpleQueues); // legacy
+router.get('/:id/queues/paginated', routerController.getSimpleQueuesPaginated);
 
 module.exports = router;
 -------------------------------------------------------------------
@@ -4207,7 +4351,7 @@ module.exports = new InvoiceService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/mikrotikService.js
 -------------------------------------------------------------------
-// FILE: ./backend/src/services/mikrotikService.js
+// backend/src/services/mikrotikService.js
 const { RouterOSAPI } = require('routeros-api');
 const fs = require('fs').promises;
 const path = require('path');
@@ -4241,7 +4385,6 @@ class MikroTikService {
 
   async connectToRouter(router) {
     if (this.mockMode) return { mock: true, router };
-    
     try {
       const api = new RouterOSAPI({
         host: router.ipAddress,
@@ -4250,7 +4393,6 @@ class MikroTikService {
         port: router.apiPort || 8728,
         timeout: 10000,
       });
-      
       await api.connect();
       return api;
     } catch (error) {
@@ -4260,35 +4402,25 @@ class MikroTikService {
 
   async disconnect(api) {
     if (!this.mockMode && api && api.close) {
-      try { 
-        api.close(); 
-      } catch (e) { 
-        console.error('Disconnect error:', e);
-      }
+      try { api.close(); } catch (e) { console.error('Disconnect error:', e); }
     }
   }
 
-  // --- PPPoE Secret Management ---
+  // --- Existing methods (kept for backward compatibility) ---
   async addPppoeSecret(router, username, password, profile, comment = '') {
     const params = { username, password, profile, router: router.name, comment };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE secret created' };
       await this.log('ADD_PPPOE_SECRET', params, result);
-      console.log(`[MOCK] Added PPPoE: ${username}`);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
-      
-      // Check if user already exists
       const existing = await api.write('/ppp/secret/print', [`?name=${username}`]);
       if (existing.length > 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret ${username} already exists`);
       }
-      
       await api.write('/ppp/secret/add', [
         `=name=${username}`,
         `=password=${password}`,
@@ -4297,9 +4429,7 @@ class MikroTikService {
         comment ? `=comment=${comment}` : '',
         '=disabled=no',
       ]);
-      
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret created successfully' };
       await this.log('ADD_PPPOE_SECRET', params, result);
       return result;
@@ -4311,31 +4441,24 @@ class MikroTikService {
 
   async updatePppoeSecret(router, username, newPassword, newProfile) {
     const params = { username, newPassword, newProfile, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE secret updated' };
       await this.log('UPDATE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       const id = secrets[0]['.id'];
       const commands = [`.id=${id}`];
-      
       if (newPassword) commands.push(`=password=${newPassword}`);
       if (newProfile) commands.push(`=profile=${newProfile}`);
-      
       await api.write('/ppp/secret/set', commands);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret updated successfully' };
       await this.log('UPDATE_PPPOE_SECRET', params, result);
       return result;
@@ -4347,25 +4470,20 @@ class MikroTikService {
 
   async disablePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE disabled' };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=yes']);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret disabled successfully' };
       await this.log('DISABLE_PPPOE_SECRET', params, result);
       return result;
@@ -4377,25 +4495,20 @@ class MikroTikService {
 
   async enablePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE enabled' };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       await api.write('/ppp/secret/set', [`.id=${secrets[0]['.id']}`, '=disabled=no']);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret enabled successfully' };
       await this.log('ENABLE_PPPOE_SECRET', params, result);
       return result;
@@ -4407,25 +4520,20 @@ class MikroTikService {
 
   async removePppoeSecret(router, username) {
     const params = { username, router: router.name };
-    
     if (this.mockMode) {
       const result = { success: true, message: 'Mock: PPPoE removed' };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
       return result;
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print', [`?name=${username}`]);
-      
       if (secrets.length === 0) {
         await this.disconnect(api);
         throw new Error(`PPPoE secret not found: ${username}`);
       }
-      
       await api.write('/ppp/secret/remove', [`.id=${secrets[0]['.id']}`]);
       await this.disconnect(api);
-      
       const result = { success: true, message: 'PPPoE secret removed successfully' };
       await this.log('REMOVE_PPPOE_SECRET', params, result);
       return result;
@@ -4435,6 +4543,154 @@ class MikroTikService {
     }
   }
 
+  // --- NEW: Toggle PPPoE secret (enable/disable) ---
+  async togglePppoeSecret(router, username, disable) {
+    if (disable) {
+      return this.disablePppoeSecret(router, username);
+    } else {
+      return this.enablePppoeSecret(router, username);
+    }
+  }
+
+  // --- NEW: Paginated & filterable PPPoE secrets ---
+  async getPppoeSecretsPaginated(router, page = 1, limit = 50, search = '', status = '') {
+    const params = { router: router.name, page, limit, search, status };
+    if (this.mockMode) {
+      // Generate mock data
+      const all = [];
+      for (let i = 1; i <= 250; i++) {
+        all.push({
+          id: `mock_${i}`,
+          name: `user${i}`,
+          profile: i % 2 === 0 ? 'default' : 'premium',
+          disabled: i % 5 === 0,
+          comment: i % 3 === 0 ? 'mock comment' : '',
+        });
+      }
+      // Apply search filter
+      let filtered = all.filter(s => s.name.includes(search) || (s.comment && s.comment.includes(search)));
+      if (status === 'enabled') filtered = filtered.filter(s => !s.disabled);
+      else if (status === 'disabled') filtered = filtered.filter(s => s.disabled);
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_PPPOE_SECRETS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      // Build filter query
+      let filter = [];
+      if (search) filter.push(`?name=${search}`);
+      // Note: RouterOS API doesn't support status filter directly, we'll filter in code
+      const secrets = await api.write('/ppp/secret/print', filter);
+      await this.disconnect(api);
+
+      let filtered = secrets.map(s => ({
+        id: s['.id'],
+        name: s.name,
+        profile: s.profile,
+        disabled: s.disabled === 'true' || s.disabled === true,
+        comment: s.comment || '',
+        service: s.service || 'pppoe',
+      }));
+
+      if (search) filtered = filtered.filter(s => s.name.includes(search) || s.comment.includes(search));
+      if (status === 'enabled') filtered = filtered.filter(s => !s.disabled);
+      else if (status === 'disabled') filtered = filtered.filter(s => s.disabled);
+
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_PPPOE_SECRETS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    } catch (error) {
+      await this.log('GET_PPPOE_SECRETS_PAGINATED', params, { error: error.message });
+      throw new Error(`Failed to fetch PPPoE secrets: ${error.message}`);
+    }
+  }
+
+  // --- NEW: Paginated active sessions ---
+  async getActiveSessionsPaginated(router, page = 1, limit = 50, search = '') {
+    const params = { router: router.name, page, limit, search };
+    if (this.mockMode) {
+      const all = [];
+      for (let i = 1; i <= 120; i++) {
+        all.push({
+          id: `session_${i}`,
+          username: `user${i}`,
+          address: `192.168.88.${i}`,
+          uptime: `${Math.floor(i/10)}h ${i%60}m`,
+          bytesIn: i * 1000000,
+          bytesOut: i * 2000000,
+        });
+      }
+      let filtered = all.filter(s => s.username.includes(search));
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_ACTIVE_SESSIONS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      const sessions = await api.write('/ppp/active/print');
+      await this.disconnect(api);
+
+      let filtered = sessions.map(s => ({
+        id: s['.id'],
+        username: s.name,
+        address: s.address,
+        uptime: s.uptime,
+        bytesIn: parseInt(s['bytes-in']) || 0,
+        bytesOut: parseInt(s['bytes-out']) || 0,
+        service: s.service,
+        callerId: s['caller-id'] || '',
+      }));
+
+      if (search) filtered = filtered.filter(s => s.username.includes(search));
+
+      const total = filtered.length;
+      const start = (page - 1) * limit;
+      const data = filtered.slice(start, start + limit);
+      await this.log('GET_ACTIVE_SESSIONS_PAGINATED', params, { total, count: data.length });
+      return { data, total };
+    } catch (error) {
+      await this.log('GET_ACTIVE_SESSIONS_PAGINATED', params, { error: error.message });
+      throw new Error(`Failed to fetch active sessions: ${error.message}`);
+    }
+  }
+
+  // --- NEW: Disconnect active session ---
+  async removeActiveSession(router, username) {
+    const params = { username, router: router.name };
+    if (this.mockMode) {
+      const result = { success: true, message: `Mock: Disconnected session ${username}` };
+      await this.log('REMOVE_ACTIVE_SESSION', params, result);
+      return result;
+    }
+    try {
+      const api = await this.connectToRouter(router);
+      // Find session by username
+      const sessions = await api.write('/ppp/active/print', [`?name=${username}`]);
+      if (sessions.length === 0) {
+        await this.disconnect(api);
+        throw new Error(`No active session found for ${username}`);
+      }
+      await api.write('/ppp/active/remove', [`.id=${sessions[0]['.id']}`]);
+      await this.disconnect(api);
+      const result = { success: true, message: `Session ${username} disconnected` };
+      await this.log('REMOVE_ACTIVE_SESSION', params, result);
+      return result;
+    } catch (error) {
+      await this.log('REMOVE_ACTIVE_SESSION', params, { error: error.message });
+      throw new Error(`Failed to disconnect session: ${error.message}`);
+    }
+  }
+
+  // --- Existing getters (unchanged but kept for other uses) ---
   async getPppoeSecrets(router) {
     if (this.mockMode) {
       return [
@@ -4442,12 +4698,10 @@ class MikroTikService {
         { name: 'user2', profile: 'premium', disabled: true, comment: 'Mock user 2' },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const secrets = await api.write('/ppp/secret/print');
       await this.disconnect(api);
-      
       return secrets.map(s => ({
         id: s['.id'],
         name: s.name,
@@ -4462,19 +4716,16 @@ class MikroTikService {
     }
   }
 
-  // --- Active Sessions ---
   async getActiveSessions(router) {
     if (this.mockMode) {
       return [
         { name: 'user1', address: '10.0.0.101', uptime: '01:23:45', bytesIn: 1234567, bytesOut: 7654321 },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const sessions = await api.write('/ppp/active/print');
       await this.disconnect(api);
-      
       return sessions.map(s => ({
         id: s['.id'],
         username: s.name,
@@ -4491,7 +4742,6 @@ class MikroTikService {
     }
   }
 
-  // --- Router Info ---
   async getRouterInfo(router) {
     if (this.mockMode) {
       return {
@@ -4503,16 +4753,11 @@ class MikroTikService {
         cpuLoad: '12%',
       };
     }
-
     try {
       const api = await this.connectToRouter(router);
-      
       const identity = await api.write('/system/identity/print');
       const resource = await api.write('/system/resource/print');
-      const clock = await api.write('/system/clock/print');
-      
       await this.disconnect(api);
-
       return {
         identity: identity[0]?.name || 'Unknown',
         version: resource[0]?.version || 'Unknown',
@@ -4521,7 +4766,6 @@ class MikroTikService {
         totalMemory: resource[0]?.['total-memory'] || 'Unknown',
         cpuLoad: resource[0]?.['cpu-load'] || 'Unknown',
         boardName: resource[0]?.['board-name'] || 'Unknown',
-        currentTime: clock[0]?.date + ' ' + clock[0]?.time || 'Unknown',
       };
     } catch (error) {
       throw new Error(`Failed to get router info: ${error.message}`);
@@ -4534,17 +4778,11 @@ class MikroTikService {
         success: true,
         mock: true,
         message: 'Mock Mode Active',
-        data: { 
-          identity: `${router.name} (Mock)`, 
-          version: '7.15 (Mock)', 
-          uptime: 'N/A' 
-        }
+        data: { identity: `${router.name} (Mock)`, version: '7.15 (Mock)', uptime: 'N/A' }
       };
     }
-
     try {
       const info = await this.getRouterInfo(router);
-      
       return {
         success: true,
         mock: false,
@@ -4561,19 +4799,16 @@ class MikroTikService {
     }
   }
 
-  // --- Simple Queue Management ---
   async getSimpleQueues(router) {
     if (this.mockMode) {
       return [
         { name: 'queue1', target: '10.0.0.101/32', maxLimit: '10M/10M', comment: 'Mock queue' },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const queues = await api.write('/queue/simple/print');
       await this.disconnect(api);
-      
       return queues.map(q => ({
         id: q['.id'],
         name: q.name,
@@ -4588,7 +4823,6 @@ class MikroTikService {
     }
   }
 
-  // --- Profile Management ---
   async getProfiles(router) {
     if (this.mockMode) {
       return [
@@ -4596,12 +4830,10 @@ class MikroTikService {
         { name: 'premium', localAddress: '10.0.0.1', remoteAddress: 'pool2', rateLimit: '50M/50M' },
       ];
     }
-
     try {
       const api = await this.connectToRouter(router);
       const profiles = await api.write('/ppp/profile/print');
       await this.disconnect(api);
-      
       return profiles.map(p => ({
         id: p['.id'],
         name: p.name,
@@ -4614,6 +4846,26 @@ class MikroTikService {
       console.error(`Failed to get profiles from ${router.name}:`, error.message);
       return [];
     }
+  }
+
+  // --- NEW: Paginated profiles (for consistency) ---
+  async getProfilesPaginated(router, page = 1, limit = 50, search = '') {
+    const all = await this.getProfiles(router);
+    let filtered = all.filter(p => p.name.includes(search) || p.comment.includes(search));
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const data = filtered.slice(start, start + limit);
+    return { data, total };
+  }
+
+  // --- NEW: Paginated queues ---
+  async getSimpleQueuesPaginated(router, page = 1, limit = 50, search = '') {
+    const all = await this.getSimpleQueues(router);
+    let filtered = all.filter(q => q.name.includes(search) || q.comment.includes(search));
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const data = filtered.slice(start, start + limit);
+    return { data, total };
   }
 }
 
@@ -4936,7 +5188,7 @@ module.exports = new PaymentService();
 -------------------------------------------------------------------
 FILE: ./backend/src/services/routerService.js
 -------------------------------------------------------------------
-// FILE: ./backend/src/services/routerService.js
+// backend/src/services/routerService.js
 const prisma = require('../config/db');
 const mikrotikService = require('./mikrotikService');
 
@@ -4950,7 +5202,6 @@ class RouterService {
       },
       orderBy: { name: 'asc' },
     });
-
     return routers;
   }
 
@@ -4966,7 +5217,6 @@ class RouterService {
         },
       },
     });
-
     if (!router) throw new Error('Router not found');
     return router;
   }
@@ -4982,7 +5232,6 @@ class RouterService {
         isActive: true,
       },
     });
-
     await prisma.auditLog.create({
       data: {
         userId,
@@ -4990,7 +5239,6 @@ class RouterService {
         details: JSON.stringify({ routerId: router.id, name: router.name }),
       },
     });
-
     return router;
   }
 
@@ -4998,9 +5246,7 @@ class RouterService {
     const router = await prisma.router.findUnique({
       where: { id: parseInt(id) },
     });
-
     if (!router) throw new Error('Router not found');
-
     const updatedRouter = await prisma.router.update({
       where: { id: parseInt(id) },
       data: {
@@ -5012,7 +5258,6 @@ class RouterService {
         isActive: data.isActive !== undefined ? data.isActive : router.isActive,
       },
     });
-
     await prisma.auditLog.create({
       data: {
         userId,
@@ -5020,7 +5265,6 @@ class RouterService {
         details: JSON.stringify({ routerId: updatedRouter.id, changes: data }),
       },
     });
-
     return updatedRouter;
   }
 
@@ -5031,15 +5275,11 @@ class RouterService {
         _count: { select: { customers: true } },
       },
     });
-
     if (!router) throw new Error('Router not found');
-
     if (router._count.customers > 0) {
       throw new Error('Cannot delete router with assigned customers. Reassign customers first.');
     }
-
     await prisma.router.delete({ where: { id: parseInt(id) } });
-
     await prisma.auditLog.create({
       data: {
         userId,
@@ -5047,7 +5287,6 @@ class RouterService {
         details: JSON.stringify({ routerId: router.id, name: router.name }),
       },
     });
-
     return { success: true };
   }
 
@@ -5055,9 +5294,7 @@ class RouterService {
     const router = await prisma.router.findUnique({
       where: { id: parseInt(id) },
     });
-
     if (!router) throw new Error('Router not found');
-
     return await mikrotikService.testConnection(router);
   }
 
@@ -5083,7 +5320,6 @@ class RouterService {
           ? `192.168.88.${Math.floor(Math.random() * 254) + 1}` 
           : '-',
       }));
-
       return {
         total: customersWithStatus.length,
         online: customersWithStatus.filter(c => c.isOnline).length,
@@ -5095,7 +5331,6 @@ class RouterService {
     // REAL IMPLEMENTATION
     const routers = await prisma.router.findMany({ where: { isActive: true } });
     const allActiveSessions = [];
-    
     for (const router of routers) {
       try {
         const sessions = await mikrotikService.getActiveSessions(router);
@@ -5132,30 +5367,22 @@ class RouterService {
     const router = await prisma.router.findUnique({
       where: { id: parseInt(id) },
     });
-
     if (!router) throw new Error('Router not found');
-
     return await mikrotikService.getRouterInfo(router);
   }
 
-  // --- PPPoE Management ---
-  async getPppoeSecrets(routerId) {
-    const router = await prisma.router.findUnique({
-      where: { id: parseInt(routerId) },
-    });
-
+  // --- PPPoE Management (paginated) ---
+  async getPppoeSecretsPaginated(routerId, page, limit, search, status) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
-
-    return await mikrotikService.getPppoeSecrets(router);
+    return mikrotikService.getPppoeSecretsPaginated(router, page, limit, search, status);
   }
 
   async createPppoeSecret(routerId, username, password, profile, comment) {
     const router = await prisma.router.findUnique({
       where: { id: parseInt(routerId) },
     });
-
     if (!router) throw new Error('Router not found');
-
     return await mikrotikService.addPppoeSecret(router, username, password, profile, comment);
   }
 
@@ -5163,9 +5390,7 @@ class RouterService {
     const router = await prisma.router.findUnique({
       where: { id: parseInt(routerId) },
     });
-
     if (!router) throw new Error('Router not found');
-
     return await mikrotikService.updatePppoeSecret(router, username, newPassword, newProfile);
   }
 
@@ -5173,72 +5398,66 @@ class RouterService {
     const router = await prisma.router.findUnique({
       where: { id: parseInt(routerId) },
     });
-
     if (!router) throw new Error('Router not found');
-
     return await mikrotikService.removePppoeSecret(router, username);
   }
 
-  // --- Active Sessions ---
-  async getActiveSessions(routerId) {
-    const router = await prisma.router.findUnique({
-      where: { id: parseInt(routerId) },
-    });
-
+  async togglePppoeSecret(routerId, username, disable) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
-
-    return await mikrotikService.getActiveSessions(router);
+    return mikrotikService.togglePppoeSecret(router, username, disable);
   }
 
-  // --- Profiles ---
-  async getProfiles(routerId) {
-    const router = await prisma.router.findUnique({
-      where: { id: parseInt(routerId) },
-    });
-
+  // --- Active Sessions (paginated) ---
+  async getActiveSessionsPaginated(routerId, page, limit, search) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
-
-    return await mikrotikService.getProfiles(router);
+    return mikrotikService.getActiveSessionsPaginated(router, page, limit, search);
   }
 
-  // --- Simple Queues ---
-  async getSimpleQueues(routerId) {
-    const router = await prisma.router.findUnique({
-      where: { id: parseInt(routerId) },
-    });
-
+  async removeActiveSession(routerId, username) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
-
-    return await mikrotikService.getSimpleQueues(router);
+    return mikrotikService.removeActiveSession(router, username);
   }
 
+  // --- Profiles (paginated) ---
+  async getProfilesPaginated(routerId, page, limit, search) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
+    if (!router) throw new Error('Router not found');
+    return mikrotikService.getProfilesPaginated(router, page, limit, search);
+  }
+
+  // --- Queues (paginated) ---
+  async getSimpleQueuesPaginated(routerId, page, limit, search) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
+    if (!router) throw new Error('Router not found');
+    return mikrotikService.getSimpleQueuesPaginated(router, page, limit, search);
+  }
+
+  // --- Bulk operations ---
   async bulkSuspend(customerIds, userId) {
     const results = { success: 0, failed: 0, errors: [] };
-
     for (const id of customerIds) {
       try {
         const customer = await prisma.customer.findUnique({
           where: { id: parseInt(id) },
           include: { router: true },
         });
-
         if (!customer) {
           results.failed++;
           results.errors.push({ id, error: 'Customer not found' });
           continue;
         }
-
         if (customer.status === 'SUSPENDED') {
           results.failed++;
           results.errors.push({ id, error: 'Already suspended' });
           continue;
         }
-
         await prisma.customer.update({
           where: { id: parseInt(id) },
           data: { status: 'SUSPENDED' },
         });
-
         if (customer.routerId && customer.router) {
           try {
             await mikrotikService.disablePppoeSecret(customer.router, customer.pppoeUsername);
@@ -5246,14 +5465,12 @@ class RouterService {
             console.error(`Failed to disable on router for customer ${id}:`, error);
           }
         }
-
         results.success++;
       } catch (error) {
         results.failed++;
         results.errors.push({ id, error: error.message });
       }
     }
-
     await prisma.auditLog.create({
       data: {
         userId,
@@ -5261,37 +5478,31 @@ class RouterService {
         details: JSON.stringify({ customerIds, results }),
       },
     });
-
     return results;
   }
 
   async bulkRestore(customerIds, userId) {
     const results = { success: 0, failed: 0, errors: [] };
-
     for (const id of customerIds) {
       try {
         const customer = await prisma.customer.findUnique({
           where: { id: parseInt(id) },
           include: { router: true },
         });
-
         if (!customer) {
           results.failed++;
           results.errors.push({ id, error: 'Customer not found' });
           continue;
         }
-
         if (customer.status === 'ACTIVE') {
           results.failed++;
           results.errors.push({ id, error: 'Already active' });
           continue;
         }
-
         await prisma.customer.update({
           where: { id: parseInt(id) },
           data: { status: 'ACTIVE' },
         });
-
         if (customer.routerId && customer.router) {
           try {
             await mikrotikService.enablePppoeSecret(customer.router, customer.pppoeUsername);
@@ -5299,14 +5510,12 @@ class RouterService {
             console.error(`Failed to enable on router for customer ${id}:`, error);
           }
         }
-
         results.success++;
       } catch (error) {
         results.failed++;
         results.errors.push({ id, error: error.message });
       }
     }
-
     await prisma.auditLog.create({
       data: {
         userId,
@@ -5314,8 +5523,32 @@ class RouterService {
         details: JSON.stringify({ customerIds, results }),
       },
     });
-
     return results;
+  }
+
+  // Legacy non-paginated methods (kept for backward compatibility)
+  async getPppoeSecrets(routerId) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
+    if (!router) throw new Error('Router not found');
+    return mikrotikService.getPppoeSecrets(router);
+  }
+
+  async getActiveSessions(routerId) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
+    if (!router) throw new Error('Router not found');
+    return mikrotikService.getActiveSessions(router);
+  }
+
+  async getProfiles(routerId) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
+    if (!router) throw new Error('Router not found');
+    return mikrotikService.getProfiles(router);
+  }
+
+  async getSimpleQueues(routerId) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
+    if (!router) throw new Error('Router not found');
+    return mikrotikService.getSimpleQueues(router);
   }
 }
 
@@ -6057,6 +6290,7 @@ FILE: ./file_list.tmp
 ./frontend/src/pages/PackagesPage.jsx
 ./frontend/src/pages/PaymentsPage.jsx
 ./frontend/src/pages/ReportsPage.jsx
+./frontend/src/pages/RouterDetailPage.jsx
 ./frontend/src/pages/RoutersPage.jsx
 ./frontend/src/pages/SettingsPage.jsx
 ./frontend/src/pages/UsersPage.jsx
@@ -6074,6 +6308,7 @@ FILE: ./file_list.tmp
 ./frontend/src/services/settingsApi.js
 ./frontend/src/services/userApi.js
 ./frontend/src/store/authStore.js
+./frontend/src/utils/export.js
 ./frontend/tailwind.config.js
 ./frontend/vite.config.js
 ./generate_map.sh
@@ -10733,6 +10968,7 @@ FILE: ./frontend/src/App.css
 -------------------------------------------------------------------
 FILE: ./frontend/src/App.jsx
 -------------------------------------------------------------------
+// frontend/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -10746,8 +10982,8 @@ import BillingPage from './pages/BillingPage';
 import PaymentsPage from './pages/PaymentsPage';
 import ReportsPage from './pages/ReportsPage';
 import RoutersPage from './pages/RoutersPage';
+import RouterDetailPage from './pages/RouterDetailPage';
 import LiveStatusPage from './pages/LiveStatusPage';
-// Phase 6 Imports
 import FinancePage from './pages/FinancePage';
 import UsersPage from './pages/UsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
@@ -10784,6 +11020,7 @@ function App() {
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/routers" element={<RoutersPage />} />
+              <Route path="/routers/:id" element={<RouterDetailPage />} />
               <Route path="/live-status" element={<LiveStatusPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/reports" element={<ReportsPage />} />
@@ -11506,13 +11743,11 @@ export default function Layout() {
 -------------------------------------------------------------------
 FILE: ./frontend/src/components/Login.jsx
 -------------------------------------------------------------------
-// FILE: ./frontend/src/components/Login.jsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useState } from 'react';
+// frontend/src/components/Login.jsx
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Wifi, Loader2 } from 'lucide-react';
+import { z } from 'zod';
 import { authApi } from '../services/authApi';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -11525,22 +11760,32 @@ const loginSchema = z.object({
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({ username: '', password: '' });
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { username: '', password: '' },
-  });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const username = usernameRef.current.value;
+    const password = passwordRef.current.value;
+    const formData = { username, password };
 
-  const onSubmit = async (data) => {
+    // Validate using Zod
+    const result = loginSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors = {};
+      result.error.errors.forEach((err) => {
+        fieldErrors[err.path[0]] = err.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await authApi.login(data);
+      const response = await authApi.login(formData);
       const { token, user } = response.data.data;
       login(user, token);
       toast.success(`Welcome back, ${user.fullName}!`);
@@ -11564,22 +11809,23 @@ export default function Login() {
           <p className="text-sm text-slate-500">Sign in to manage your network</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Username */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Username</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-                {...register('username')}
+                ref={usernameRef}
                 type="text"
                 autoComplete="username"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="admin"
+                onChange={() => setErrors((prev) => ({ ...prev, username: '' }))}
               />
             </div>
             {errors.username && (
-              <p className="text-xs text-red-500">{errors.username.message}</p>
+              <p className="text-xs text-red-500">{errors.username}</p>
             )}
           </div>
 
@@ -11589,11 +11835,12 @@ export default function Login() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-                {...register('password')}
+                ref={passwordRef}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="••••••••"
+                onChange={() => setErrors((prev) => ({ ...prev, password: '' }))}
               />
               <button
                 type="button"
@@ -11605,7 +11852,7 @@ export default function Login() {
               </button>
             </div>
             {errors.password && (
-              <p className="text-xs text-red-500">{errors.password.message}</p>
+              <p className="text-xs text-red-500">{errors.password}</p>
             )}
           </div>
 
@@ -12402,17 +12649,20 @@ export default function AuditLogsPage() {
 -------------------------------------------------------------------
 FILE: ./frontend/src/pages/BillingPage.jsx
 -------------------------------------------------------------------
+// frontend/src/pages/BillingPage.jsx
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceApi } from '../services/invoiceApi';
 import { paymentApi } from '../services/paymentApi';
-import { FileText, Plus, CreditCard, Eye, Calendar } from 'lucide-react';
+import { notificationApi } from '../services/notificationApi';
+import { FileText, Plus, CreditCard, Eye, Calendar, Download, Send } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
 import GenerateInvoiceForm from '../components/GenerateInvoiceForm';
 import PaymentForm from '../components/PaymentForm';
 import InvoiceDetailsModal from '../components/InvoiceDetailsModal';
+import { exportCSV } from '../utils/export';
 import toast from 'react-hot-toast';
 
 export default function BillingPage() {
@@ -12453,6 +12703,16 @@ export default function BillingPage() {
     onError: (error) => toast.error(error.response?.data?.message || 'Failed to generate'),
   });
 
+  // Send reminders mutation
+  const sendRemindersMutation = useMutation({
+    mutationFn: () => notificationApi.sendReminders(),
+    onSuccess: (res) => {
+      const { sent, failed } = res.data.data;
+      toast.success(`Reminders sent: ${sent} successful, ${failed} failed`);
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to send reminders'),
+  });
+
   const getStatusBadge = (status, dueAmount = 0) => {
     if (status === 'PAID') return <Badge variant="success">PAID</Badge>;
     if (status === 'PARTIAL') return <Badge variant="warning">PARTIAL</Badge>;
@@ -12467,6 +12727,34 @@ export default function BillingPage() {
   const handleViewDetails = (invoice) => {
     setSelectedInvoice(invoice);
     setIsDetailsOpen(true);
+  };
+
+  const handleExportCSV = () => {
+    if (!data?.invoices || data.invoices.length === 0) {
+      toast.error('No invoices to export');
+      return;
+    }
+    const columns = [
+      { key: 'id', label: 'ID' },
+      { key: 'month', label: 'Month' },
+      { key: 'customerName', label: 'Customer' },
+      { key: 'total', label: 'Total (৳)' },
+      { key: 'paidAmount', label: 'Paid (৳)' },
+      { key: 'dueAmount', label: 'Due (৳)' },
+      { key: 'status', label: 'Status' },
+      { key: 'dueDate', label: 'Due Date' },
+    ];
+    const dataToExport = data.invoices.map(inv => ({
+      id: inv.id,
+      month: inv.month,
+      customerName: inv.customer?.name || 'N/A',
+      total: inv.total,
+      paidAmount: inv.paidAmount || 0,
+      dueAmount: inv.dueAmount || inv.total - (inv.paidAmount || 0),
+      status: inv.status,
+      dueDate: new Date(inv.dueDate).toLocaleDateString('en-GB'),
+    }));
+    exportCSV(dataToExport, columns, `invoices_${month}`);
   };
 
   return (
@@ -12518,136 +12806,146 @@ export default function BillingPage() {
               <option value="PAID">Paid</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <Button onClick={() => setIsGenerateOpen(true)} className="w-full sm:w-auto">
+          <div className="flex items-end space-x-2 flex-wrap gap-2">
+            <Button onClick={() => setIsGenerateOpen(true)} className="whitespace-nowrap">
               <Plus className="w-4 h-4" />
               <span>Generate</span>
+            </Button>
+            <Button variant="outline" onClick={handleExportCSV} className="whitespace-nowrap">
+              <Download className="w-4 h-4" />
+              <span>Export CSV</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => sendRemindersMutation.mutate()}
+              disabled={sendRemindersMutation.isPending}
+              className="whitespace-nowrap"
+            >
+              <Send className="w-4 h-4" />
+              <span>Send Reminders</span>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Invoices List */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Paid</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Due Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {isLoading ? (
-                <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
-              ) : data?.invoices?.length === 0 ? (
-                <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">No invoices found</td></tr>
-              ) : (
-                data?.invoices?.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-slate-900">{inv.customer.name}</div>
-                      <div className="text-xs text-slate-500">{inv.customer.phone}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">৳{inv.total}</td>
-                    <td className="px-6 py-4 text-sm text-green-600">৳{inv.paidAmount}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {new Date(inv.dueDate).toLocaleDateString('en-GB')}
-                    </td>
-                    <td className="px-6 py-4">{getStatusBadge(inv.status, inv.dueAmount)}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end space-x-1">
+      {/* Invoices List (unchanged) */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Customer</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Paid</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Due Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {isLoading ? (
+              <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+            ) : data?.invoices?.length === 0 ? (
+              <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">No invoices found</td></tr>
+            ) : (
+              data?.invoices?.map((inv) => (
+                <tr key={inv.id} className="hover:bg-slate-50">
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-medium text-slate-900">{inv.customer.name}</div>
+                    <div className="text-xs text-slate-500">{inv.customer.phone}</div>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-900">৳{inv.total}</td>
+                  <td className="px-6 py-4 text-sm text-green-600">৳{inv.paidAmount}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {new Date(inv.dueDate).toLocaleDateString('en-GB')}
+                  </td>
+                  <td className="px-6 py-4">{getStatusBadge(inv.status, inv.dueAmount)}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end space-x-1">
+                      <button
+                        onClick={() => handleViewDetails(inv)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                        title="View"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {inv.status !== 'PAID' && (
                         <button
-                          onClick={() => handleViewDetails(inv)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="View"
+                          onClick={() => handlePay(inv)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
+                          title="Collect Payment"
                         >
-                          <Eye className="w-4 h-4" />
+                          <CreditCard className="w-4 h-4" />
                         </button>
-                        {inv.status !== 'PAID' && (
-                          <button
-                            onClick={() => handlePay(inv)}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
-                            title="Collect Payment"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-        {/* Mobile Cards */}
-        <div className="lg:hidden divide-y divide-slate-200">
-          {isLoading ? (
-            <div className="p-8 text-center text-slate-500">Loading...</div>
-          ) : data?.invoices?.length === 0 ? (
-            <div className="p-8 text-center">
-              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-500">No invoices found</p>
-            </div>
-          ) : (
-            data?.invoices?.map((inv) => (
-              <div key={inv.id} className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">{inv.customer.name}</h3>
-                    <p className="text-xs text-slate-500">{inv.customer.phone}</p>
-                  </div>
-                  {getStatusBadge(inv.status, inv.dueAmount)}
+      {/* Mobile Cards (unchanged) */}
+      <div className="lg:hidden divide-y divide-slate-200">
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-500">Loading...</div>
+        ) : data?.invoices?.length === 0 ? (
+          <div className="p-8 text-center">
+            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+            <p className="text-slate-500">No invoices found</p>
+          </div>
+        ) : (
+          data?.invoices?.map((inv) => (
+            <div key={inv.id} className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-slate-900 truncate">{inv.customer.name}</h3>
+                  <p className="text-xs text-slate-500">{inv.customer.phone}</p>
                 </div>
+                {getStatusBadge(inv.status, inv.dueAmount)}
+              </div>
 
-                <div className="grid grid-cols-3 gap-2 text-sm mb-3">
-                  <div>
-                    <p className="text-xs text-slate-500">Amount</p>
-                    <p className="font-semibold text-slate-900">৳{inv.total}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Paid</p>
-                    <p className="font-semibold text-green-600">৳{inv.paidAmount}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Due</p>
-                    <p className="font-semibold text-red-600">৳{inv.dueAmount}</p>
-                  </div>
+              <div className="grid grid-cols-3 gap-2 text-sm mb-3">
+                <div>
+                  <p className="text-xs text-slate-500">Amount</p>
+                  <p className="font-semibold text-slate-900">৳{inv.total}</p>
                 </div>
-
-                <div className="flex items-center space-x-2 pt-3 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewDetails(inv)}
-                    className="flex-1"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>View</span>
-                  </Button>
-                  {inv.status !== 'PAID' && (
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => handlePay(inv)}
-                      className="flex-1"
-                    >
-                      <CreditCard className="w-4 h-4" />
-                      <span>Pay</span>
-                    </Button>
-                  )}
+                <div>
+                  <p className="text-xs text-slate-500">Paid</p>
+                  <p className="font-semibold text-green-600">৳{inv.paidAmount}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Due</p>
+                  <p className="font-semibold text-red-600">৳{inv.dueAmount}</p>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+
+              <div className="flex items-center space-x-2 pt-3 border-t border-slate-100">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleViewDetails(inv)}
+                  className="flex-1"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>View</span>
+                </Button>
+                {inv.status !== 'PAID' && (
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={() => handlePay(inv)}
+                    className="flex-1"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Pay</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Pagination */}
@@ -13486,7 +13784,8 @@ function FinanceForm({ type, onSubmit, isLoading, onCancel }) {
 -------------------------------------------------------------------
 FILE: ./frontend/src/pages/LiveStatusPage.jsx
 -------------------------------------------------------------------
-import { useState } from 'react';
+// frontend/src/pages/LiveStatusPage.jsx
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { routerApi } from '../services/routerApi';
 import { Zap, Wifi, WifiOff, RefreshCw, CheckSquare, Square, Pause, Play } from 'lucide-react';
@@ -13497,13 +13796,42 @@ import toast from 'react-hot-toast';
 export default function LiveStatusPage() {
   const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [search, setSearch] = useState('');
+  const [routerFilter, setRouterFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['liveStatus'],
     queryFn: () => routerApi.getLiveStatus().then(res => res.data.data),
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 30000,
   });
+
+  const routersSummary = useMemo(() => {
+    if (!data?.customers) return [];
+    const map = {};
+    data.customers.forEach(c => {
+      const routerName = c.routerName || 'No Router';
+      if (!map[routerName]) {
+        map[routerName] = { total: 0, online: 0, offline: 0 };
+      }
+      map[routerName].total++;
+      if (c.isOnline) map[routerName].online++;
+      else map[routerName].offline++;
+    });
+    return Object.entries(map).map(([name, stats]) => ({ name, ...stats }));
+  }, [data]);
+
+  const filteredCustomers = useMemo(() => {
+    if (!data?.customers) return [];
+    if (routerFilter === 'all') return data.customers;
+    return data.customers.filter(c => (c.routerName || 'No Router') === routerFilter);
+  }, [data, routerFilter]);
+
+  const searchedCustomers = useMemo(() => {
+    return filteredCustomers.filter(c =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.pppoeUsername.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [filteredCustomers, search]);
 
   const bulkSuspendMutation = useMutation({
     mutationFn: (ids) => routerApi.bulkSuspend(ids),
@@ -13534,17 +13862,12 @@ export default function LiveStatusPage() {
   };
 
   const selectAll = () => {
-    if (selectedCustomers.length === filteredCustomers?.length) {
+    if (selectedCustomers.length === searchedCustomers?.length) {
       setSelectedCustomers([]);
     } else {
-      setSelectedCustomers(filteredCustomers?.map(c => c.id) || []);
+      setSelectedCustomers(searchedCustomers?.map(c => c.id) || []);
     }
   };
-
-  const filteredCustomers = data?.customers?.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.pppoeUsername.toLowerCase().includes(search.toLowerCase())
-  ) || [];
 
   const handleBulkSuspend = () => {
     if (selectedCustomers.length === 0) {
@@ -13598,6 +13921,22 @@ export default function LiveStatusPage() {
         </div>
       )}
 
+      {/* Router Summary Cards */}
+      {routersSummary.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {routersSummary.map((router) => (
+            <div key={router.name} className="bg-white rounded-xl border border-slate-200 p-4">
+              <h4 className="font-medium text-slate-900 truncate">{router.name}</h4>
+              <div className="flex items-center justify-between mt-2 text-sm">
+                <span className="text-slate-500">Total: <strong>{router.total}</strong></span>
+                <span className="text-green-600">Online: {router.online}</span>
+                <span className="text-red-600">Offline: {router.offline}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Controls */}
       <div className="bg-white rounded-xl border border-slate-200 p-3 lg:p-4">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -13608,6 +13947,18 @@ export default function LiveStatusPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
+          <div className="flex-1 sm:max-w-xs">
+            <select
+              value={routerFilter}
+              onChange={(e) => setRouterFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="all">All Routers</option>
+              {routersSummary.map(r => (
+                <option key={r.name} value={r.name}>{r.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex gap-2">
             <Button
               variant="danger"
@@ -13639,7 +13990,7 @@ export default function LiveStatusPage() {
               <tr>
                 <th className="px-6 py-3 text-left">
                   <button onClick={selectAll} className="text-slate-400 hover:text-slate-600">
-                    {selectedCustomers.length === filteredCustomers?.length && filteredCustomers.length > 0
+                    {selectedCustomers.length === searchedCustomers?.length && searchedCustomers.length > 0
                       ? <CheckSquare className="w-5 h-5" />
                       : <Square className="w-5 h-5" />
                     }
@@ -13656,10 +14007,10 @@ export default function LiveStatusPage() {
             <tbody className="divide-y divide-slate-200">
               {isLoading ? (
                 <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
-              ) : filteredCustomers.length === 0 ? (
+              ) : searchedCustomers.length === 0 ? (
                 <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">No customers found</td></tr>
               ) : (
-                filteredCustomers.map((customer) => (
+                searchedCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4">
                       <button onClick={() => toggleSelect(customer.id)} className="text-slate-400 hover:text-slate-600">
@@ -13971,12 +14322,15 @@ export default function PackagesPage() {
 -------------------------------------------------------------------
 FILE: ./frontend/src/pages/PaymentsPage.jsx
 -------------------------------------------------------------------
+// frontend/src/pages/PaymentsPage.jsx
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { paymentApi } from '../services/paymentApi';
-import { Receipt, Wallet, Smartphone, Building2, TrendingUp } from 'lucide-react';
+import { Receipt, Wallet, Smartphone, Building2, TrendingUp, Download } from 'lucide-react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
+import { exportCSV } from '../utils/export';
+import toast from 'react-hot-toast';
 
 export default function PaymentsPage() {
   const [methodFilter, setMethodFilter] = useState('');
@@ -14005,8 +14359,44 @@ export default function PaymentsPage() {
     return icons[method] || icons.CASH;
   };
 
+  const handleExportCSV = () => {
+    if (!data?.payments || data.payments.length === 0) {
+      toast.error('No payments to export');
+      return;
+    }
+    const columns = [
+      { key: 'customer', label: 'Customer' },
+      { key: 'amount', label: 'Amount (৳)' },
+      { key: 'method', label: 'Method' },
+      { key: 'receivedBy', label: 'Received By' },
+      { key: 'date', label: 'Date' },
+      { key: 'notes', label: 'Notes' },
+    ];
+    const dataToExport = data.payments.map(p => ({
+      customer: p.invoice?.customer?.name || 'N/A',
+      amount: p.amount,
+      method: p.method,
+      receivedBy: p.receiver?.fullName || 'N/A',
+      date: new Date(p.date).toLocaleString('en-GB'),
+      notes: p.notes || '',
+    }));
+    exportCSV(dataToExport, columns, `payments_${new Date().toISOString().slice(0, 10)}`);
+  };
+
   return (
     <div className="space-y-4 lg:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Payments</h1>
+          <p className="text-sm text-slate-500 mt-1">Payment history and collection records</p>
+        </div>
+        <Button variant="outline" onClick={handleExportCSV}>
+          <Download className="w-4 h-4" />
+          <span>Export CSV</span>
+        </Button>
+      </div>
+
       {/* Filters */}
       <div className="bg-white rounded-xl border border-slate-200 p-3 lg:p-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -14149,17 +14539,18 @@ export default function PaymentsPage() {
     </div>
   );
 }
-
-
 -------------------------------------------------------------------
 FILE: ./frontend/src/pages/ReportsPage.jsx
 -------------------------------------------------------------------
+// frontend/src/pages/ReportsPage.jsx
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { paymentApi } from '../services/paymentApi';
 import { invoiceApi } from '../services/invoiceApi';
-import { TrendingUp, TrendingDown, Wallet, Smartphone, Building2, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Smartphone, Building2, Calendar, Download } from 'lucide-react';
 import Button from '../components/Button';
+import { exportCSV } from '../utils/export';
+import toast from 'react-hot-toast';
 
 export default function ReportsPage() {
   const today = new Date().toISOString().split('T')[0];
@@ -14178,6 +14569,49 @@ export default function ReportsPage() {
     queryKey: ['monthlySummary', selectedMonth],
     queryFn: () => invoiceApi.getMonthlySummary(selectedMonth).then(res => res.data.data),
   });
+
+  // Export handlers
+  const handleExportDaily = () => {
+    if (!dailyData?.payments || dailyData.payments.length === 0) {
+      toast.error('No daily data to export');
+      return;
+    }
+    const columns = [
+      { key: 'customer', label: 'Customer' },
+      { key: 'amount', label: 'Amount (৳)' },
+      { key: 'method', label: 'Method' },
+      { key: 'receivedBy', label: 'Received By' },
+      { key: 'date', label: 'Date' },
+    ];
+    const data = dailyData.payments.map(p => ({
+      customer: p.invoice?.customer?.name || 'N/A',
+      amount: p.amount,
+      method: p.method,
+      receivedBy: p.receiver?.fullName || 'N/A',
+      date: new Date(p.date).toLocaleString('en-GB'),
+    }));
+    exportCSV(data, columns, `daily_collection_${selectedDate}`);
+  };
+
+  const handleExportMonthly = () => {
+    if (!monthlyData) {
+      toast.error('No monthly data to export');
+      return;
+    }
+    const columns = [
+      { key: 'metric', label: 'Metric' },
+      { key: 'value', label: 'Value' },
+    ];
+    const data = [
+      { metric: 'Total Invoices', value: monthlyData.totalInvoices },
+      { metric: 'Total Amount', value: `৳${monthlyData.totalAmount.toLocaleString()}` },
+      { metric: 'Collected', value: `৳${monthlyData.totalPaid.toLocaleString()}` },
+      { metric: 'Outstanding', value: `৳${monthlyData.totalDue.toLocaleString()}` },
+      { metric: 'Paid Invoices', value: monthlyData.paidInvoices },
+      { metric: 'Unpaid Invoices', value: monthlyData.unpaidInvoices },
+    ];
+    exportCSV(data, columns, `monthly_summary_${selectedMonth}`);
+  };
 
   const methodIcons = {
     CASH: { icon: Wallet, color: 'text-green-600', bg: 'bg-green-100' },
@@ -14219,7 +14653,13 @@ export default function ReportsPage() {
             <Calendar className="w-5 h-5 text-primary" />
             <span>Daily Collection</span>
           </h2>
-          <p className="text-sm text-slate-500">{new Date(selectedDate).toLocaleDateString('en-GB', { dateStyle: 'full' })}</p>
+          <div className="flex items-center space-x-2">
+            <p className="text-sm text-slate-500">{new Date(selectedDate).toLocaleDateString('en-GB', { dateStyle: 'full' })}</p>
+            <Button variant="outline" size="sm" onClick={handleExportDaily}>
+              <Download className="w-4 h-4" />
+              <span>Export CSV</span>
+            </Button>
+          </div>
         </div>
 
         {dailyData ? (
@@ -14274,7 +14714,13 @@ export default function ReportsPage() {
             <TrendingUp className="w-5 h-5 text-primary" />
             <span>Monthly Summary</span>
           </h2>
-          <p className="text-sm text-slate-500">{selectedMonth}</p>
+          <div className="flex items-center space-x-2">
+            <p className="text-sm text-slate-500">{selectedMonth}</p>
+            <Button variant="outline" size="sm" onClick={handleExportMonthly}>
+              <Download className="w-4 h-4" />
+              <span>Export CSV</span>
+            </Button>
+          </div>
         </div>
 
         {monthlyData ? (
@@ -14332,14 +14778,923 @@ export default function ReportsPage() {
   );
 }
 -------------------------------------------------------------------
+FILE: ./frontend/src/pages/RouterDetailPage.jsx
+-------------------------------------------------------------------
+// frontend/src/pages/RouterDetailPage.jsx
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Server, Info, Users, Activity, Layers, BarChart3,
+  RefreshCw, Plus, Edit, Trash2, Loader2,
+  AlertCircle, Search, X, Power, PowerOff, LogOut,
+  AlertTriangle
+} from 'lucide-react';
+import { routerApi } from '../services/routerApi';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
+import Modal from '../components/Modal';
+import toast from 'react-hot-toast';
+
+// Helper to format bytes
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// Helper to format uptime
+const formatUptime = (uptime) => uptime || '-';
+
+export default function RouterDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('info');
+
+  // PPPoE state
+  const [isPppoeFormOpen, setIsPppoeFormOpen] = useState(false);
+  const [editingPppoe, setEditingPppoe] = useState(null);
+  const [pppoePage, setPppoePage] = useState(1);
+  const [pppoeLimit, setPppoeLimit] = useState(50);
+  const [pppoeSearch, setPppoeSearch] = useState('');
+  const [pppoeStatus, setPppoeStatus] = useState('');
+
+  // Sessions state
+  const [sessionPage, setSessionPage] = useState(1);
+  const [sessionLimit, setSessionLimit] = useState(50);
+  const [sessionSearch, setSessionSearch] = useState('');
+
+  // Profiles state
+  const [profilePage, setProfilePage] = useState(1);
+  const [profileLimit, setProfileLimit] = useState(50);
+  const [profileSearch, setProfileSearch] = useState('');
+
+  // Queues state
+  const [queuePage, setQueuePage] = useState(1);
+  const [queueLimit, setQueueLimit] = useState(50);
+  const [queueSearch, setQueueSearch] = useState('');
+
+  // Fetch router details
+  const { data: router, isLoading: routerLoading } = useQuery({
+    queryKey: ['router', id],
+    queryFn: () => routerApi.getById(id).then(res => res.data.data),
+  });
+
+  // Fetch router info
+  const { data: info, isLoading: infoLoading, refetch: refetchInfo } = useQuery({
+    queryKey: ['routerInfo', id],
+    queryFn: () => routerApi.getRouterInfo(id).then(res => res.data.data),
+    enabled: activeTab === 'info',
+  });
+
+  // Get mock mode status to show warning
+  const { data: mockModeData } = useQuery({
+    queryKey: ['mikrotikMockMode'],
+    queryFn: () => settingsApi.getMikrotikMockMode().then(res => res.data.data),
+    staleTime: 60000,
+  });
+  const isMockMode = mockModeData?.mockMode ?? true;
+
+  // Fetch PPPoE secrets (server-side paginated)
+  const pppoeQueryKey = ['pppoeSecretsPaginated', id, pppoePage, pppoeLimit, pppoeSearch, pppoeStatus];
+  const {
+    data: pppoeData,
+    isLoading: pppoeLoading,
+    refetch: refetchPppoe
+  } = useQuery({
+    queryKey: pppoeQueryKey,
+    queryFn: () => routerApi.getPppoeSecretsPaginated(id, {
+      page: pppoePage,
+      limit: pppoeLimit,
+      search: pppoeSearch,
+      status: pppoeStatus
+    }).then(res => res.data.data),
+    enabled: activeTab === 'pppoe',
+  });
+
+  // Fetch active sessions (server-side paginated)
+  const sessionQueryKey = ['activeSessionsPaginated', id, sessionPage, sessionLimit, sessionSearch];
+  const {
+    data: sessionData,
+    isLoading: sessionsLoading,
+    refetch: refetchSessions
+  } = useQuery({
+    queryKey: sessionQueryKey,
+    queryFn: () => routerApi.getActiveSessionsPaginated(id, {
+      page: sessionPage,
+      limit: sessionLimit,
+      search: sessionSearch
+    }).then(res => res.data.data),
+    enabled: activeTab === 'sessions',
+  });
+
+  // Fetch profiles (server-side paginated)
+  const profileQueryKey = ['profilesPaginated', id, profilePage, profileLimit, profileSearch];
+  const {
+    data: profileData,
+    isLoading: profilesLoading,
+    refetch: refetchProfiles
+  } = useQuery({
+    queryKey: profileQueryKey,
+    queryFn: () => routerApi.getProfilesPaginated(id, {
+      page: profilePage,
+      limit: profileLimit,
+      search: profileSearch
+    }).then(res => res.data.data),
+    enabled: activeTab === 'profiles',
+  });
+
+  // Fetch queues (server-side paginated)
+  const queueQueryKey = ['queuesPaginated', id, queuePage, queueLimit, queueSearch];
+  const {
+    data: queueData,
+    isLoading: queuesLoading,
+    refetch: refetchQueues
+  } = useQuery({
+    queryKey: queueQueryKey,
+    queryFn: () => routerApi.getSimpleQueuesPaginated(id, {
+      page: queuePage,
+      limit: queueLimit,
+      search: queueSearch
+    }).then(res => res.data.data),
+    enabled: activeTab === 'queues',
+  });
+
+  // --- Mutations ---
+  const createPppoeMutation = useMutation({
+    mutationFn: (data) => routerApi.createPppoeSecret(id, data),
+    onSuccess: () => {
+      toast.success('PPPoE secret created');
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
+      setIsPppoeFormOpen(false);
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to create'),
+  });
+
+  const updatePppoeMutation = useMutation({
+    mutationFn: ({ username, data }) => routerApi.updatePppoeSecret(id, username, data),
+    onSuccess: () => {
+      toast.success('PPPoE secret updated');
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
+      setIsPppoeFormOpen(false);
+      setEditingPppoe(null);
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update'),
+  });
+
+  const deletePppoeMutation = useMutation({
+    mutationFn: (username) => routerApi.deletePppoeSecret(id, username),
+    onSuccess: () => {
+      toast.success('PPPoE secret deleted');
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete'),
+  });
+
+  // === OPTIMISTIC TOGGLE ===
+  const togglePppoeMutation = useMutation({
+    mutationFn: ({ username, disable }) => routerApi.togglePppoeSecret(id, username, disable),
+    onMutate: async ({ username, disable }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: pppoeQueryKey });
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData(pppoeQueryKey);
+      // Optimistically update the cache
+      if (previousData) {
+        const newData = {
+          ...previousData,
+          data: previousData.data.map(secret =>
+            secret.name === username ? { ...secret, disabled: disable } : secret
+          )
+        };
+        queryClient.setQueryData(pppoeQueryKey, newData);
+      }
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(pppoeQueryKey, context.previousData);
+      }
+      toast.error(err.response?.data?.message || 'Failed to toggle secret');
+    },
+    onSuccess: (_, { username, disable }) => {
+      toast.success(`PPPoE secret ${disable ? 'disabled' : 'enabled'}`);
+      // Refetch in background to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
+    },
+  });
+
+  const removeSessionMutation = useMutation({
+    mutationFn: (username) => routerApi.removeActiveSession(id, username),
+    onSuccess: (_, username) => {
+      toast.success(`Session ${username} disconnected`);
+      queryClient.invalidateQueries({ queryKey: ['activeSessionsPaginated', id] });
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to disconnect'),
+  });
+
+  const handleDeletePppoe = (username) => {
+    if (window.confirm(`Delete PPPoE secret "${username}"?`)) {
+      deletePppoeMutation.mutate(username);
+    }
+  };
+
+  const handleEditPppoe = (secret) => {
+    setEditingPppoe(secret);
+    setIsPppoeFormOpen(true);
+  };
+
+  const handlePppoeSubmit = (data) => {
+    if (editingPppoe) {
+      updatePppoeMutation.mutate({ username: editingPppoe.name, data });
+    } else {
+      createPppoeMutation.mutate(data);
+    }
+  };
+
+  const handleTogglePppoe = (username, currentDisabled) => {
+    const newState = !currentDisabled;
+    togglePppoeMutation.mutate({ username, disable: newState });
+  };
+
+  const handleDisconnectSession = (username) => {
+    if (window.confirm(`Disconnect session "${username}"?`)) {
+      removeSessionMutation.mutate(username);
+    }
+  };
+
+  const handleRefresh = () => {
+    switch (activeTab) {
+      case 'info': refetchInfo(); break;
+      case 'pppoe': refetchPppoe(); break;
+      case 'sessions': refetchSessions(); break;
+      case 'profiles': refetchProfiles(); break;
+      case 'queues': refetchQueues(); break;
+      default: break;
+    }
+  };
+
+  if (routerLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!router) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+        <h2 className="text-xl font-bold text-slate-900">Router not found</h2>
+        <Button variant="outline" onClick={() => navigate('/routers')} className="mt-4">
+          Back to Routers
+        </Button>
+      </div>
+    );
+  }
+
+  // --- Tab renderers ---
+  const renderInfoTab = () => {
+    if (infoLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
+    if (!info) return <div className="py-8 text-center text-slate-500">No info available</div>;
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-slate-50 rounded-lg p-4">
+          <p className="text-sm text-slate-500">Identity</p>
+          <p className="text-lg font-semibold text-slate-900">{info.identity || '-'}</p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-4">
+          <p className="text-sm text-slate-500">Version</p>
+          <p className="text-lg font-semibold text-slate-900">{info.version || '-'}</p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-4">
+          <p className="text-sm text-slate-500">Uptime</p>
+          <p className="text-lg font-semibold text-slate-900">{info.uptime || '-'}</p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-4">
+          <p className="text-sm text-slate-500">CPU Load</p>
+          <p className="text-lg font-semibold text-slate-900">{info.cpuLoad || '-'}</p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-4">
+          <p className="text-sm text-slate-500">Free Memory</p>
+          <p className="text-lg font-semibold text-slate-900">{info.freeMemory || '-'}</p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-4">
+          <p className="text-sm text-slate-500">Total Memory</p>
+          <p className="text-lg font-semibold text-slate-900">{info.totalMemory || '-'}</p>
+        </div>
+        <div className="bg-slate-50 rounded-lg p-4 col-span-2">
+          <p className="text-sm text-slate-500">Board Name</p>
+          <p className="text-lg font-semibold text-slate-900">{info.boardName || '-'}</p>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Render helper for paginated tables with filter ---
+  const renderPaginatedTable = ({
+    data,
+    total,
+    page,
+    setPage,
+    limit,
+    setLimit,
+    search,
+    setSearch,
+    searchPlaceholder = 'Search...',
+    statusFilter,
+    setStatusFilter,
+    statusOptions,
+    loading,
+    columns,
+    renderRow,
+    keyField,
+    emptyMessage,
+    extraActions
+  }) => {
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return (
+      <div>
+        {/* Filter bar */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {statusFilter !== undefined && statusOptions && (
+            <div className="sm:w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="">All status</option>
+                {statusOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {extraActions && <div className="flex items-center">{extraActions}</div>}
+        </div>
+
+        {loading ? (
+          <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+        ) : total === 0 ? (
+          <div className="py-8 text-center text-slate-500">{emptyMessage}</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    {columns.map((col) => (
+                      <th key={col.key} className={`px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase ${col.className || ''}`}>
+                        {col.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {data.map((item) => (
+                    <tr key={item[keyField] || item.id || item.name} className="hover:bg-slate-50">
+                      {renderRow(item)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-slate-200 mt-4 gap-2">
+              <div className="text-sm text-slate-500">
+                Showing {((page - 1) * limit) + 1}–{Math.min(page * limit, total)} of {total}
+              </div>
+              <div className="flex items-center space-x-2">
+                <select
+                  value={limit}
+                  onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                  className="border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  {[20, 50, 100, 200].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 1}
+                    onClick={() => setPage(p => p - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === totalPages}
+                    onClick={() => setPage(p => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // PPPoE tab
+  const renderPppoeTab = () => {
+    const secrets = pppoeData?.data || [];
+    const total = pppoeData?.total || 0;
+
+    const columns = [
+      { key: 'username', label: 'Username' },
+      { key: 'profile', label: 'Profile' },
+      { key: 'status', label: 'Status' },
+      { key: 'comment', label: 'Comment' },
+      { key: 'actions', label: 'Actions', className: 'text-right' },
+    ];
+
+    const renderRow = (secret) => {
+      const isToggling = togglePppoeMutation.isPending && togglePppoeMutation.variables?.username === secret.name;
+      return (
+        <>
+          <td className="px-4 py-3 text-sm font-mono text-slate-900">{secret.name}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{secret.profile}</td>
+          <td className="px-4 py-3">
+            {secret.disabled ? (
+              <Badge variant="danger">Disabled</Badge>
+            ) : (
+              <Badge variant="success">Enabled</Badge>
+            )}
+          </td>
+          <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{secret.comment || '-'}</td>
+          <td className="px-4 py-3 text-right">
+            <div className="flex items-center justify-end space-x-1">
+              <button
+                onClick={() => handleTogglePppoe(secret.name, secret.disabled)}
+                disabled={isToggling}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  secret.disabled
+                    ? 'text-green-600 hover:bg-green-50'
+                    : 'text-amber-600 hover:bg-amber-50'
+                } ${isToggling ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={secret.disabled ? 'Enable' : 'Disable'}
+              >
+                {isToggling ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : secret.disabled ? (
+                  <Power className="w-4 h-4" />
+                ) : (
+                  <PowerOff className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={() => handleEditPppoe(secret)}
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                title="Edit"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDeletePppoe(secret.name)}
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                title="Delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </td>
+        </>
+      );
+    };
+
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <div className="flex items-center space-x-3">
+            <p className="text-sm text-slate-500">{total} secrets</p>
+            {isMockMode && (
+              <Badge variant="warning" className="flex items-center space-x-1">
+                <AlertTriangle className="w-3 h-3" />
+                <span>Mock Mode</span>
+              </Badge>
+            )}
+          </div>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" onClick={refetchPppoe}>
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh</span>
+            </Button>
+            <Button size="sm" onClick={() => { setEditingPppoe(null); setIsPppoeFormOpen(true); }}>
+              <Plus className="w-4 h-4" />
+              <span>Add Secret</span>
+            </Button>
+          </div>
+        </div>
+        {renderPaginatedTable({
+          data: secrets,
+          total,
+          page: pppoePage,
+          setPage: setPppoePage,
+          limit: pppoeLimit,
+          setLimit: setPppoeLimit,
+          search: pppoeSearch,
+          setSearch: setPppoeSearch,
+          searchPlaceholder: 'Search by username or comment...',
+          statusFilter: pppoeStatus,
+          setStatusFilter: setPppoeStatus,
+          statusOptions: [
+            { value: 'enabled', label: 'Enabled' },
+            { value: 'disabled', label: 'Disabled' },
+          ],
+          loading: pppoeLoading,
+          columns,
+          renderRow,
+          keyField: 'name',
+          emptyMessage: 'No PPPoE secrets found',
+        })}
+      </div>
+    );
+  };
+
+  // Sessions tab
+  const renderSessionsTab = () => {
+    const sessions = sessionData?.data || [];
+    const total = sessionData?.total || 0;
+
+    const columns = [
+      { key: 'username', label: 'Username' },
+      { key: 'address', label: 'IP Address' },
+      { key: 'uptime', label: 'Uptime' },
+      { key: 'bytesIn', label: 'Bytes In' },
+      { key: 'bytesOut', label: 'Bytes Out' },
+      { key: 'actions', label: 'Actions', className: 'text-right' },
+    ];
+
+    const renderRow = (session) => {
+      const isDisconnecting = removeSessionMutation.isPending && removeSessionMutation.variables === session.username;
+      return (
+        <>
+          <td className="px-4 py-3 text-sm font-mono text-slate-900">{session.username}</td>
+          <td className="px-4 py-3 text-sm font-mono text-slate-600">{session.address}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{formatUptime(session.uptime)}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesIn)}</td>
+          <td className="px-4 py-3 text-sm text-slate-600">{formatBytes(session.bytesOut)}</td>
+          <td className="px-4 py-3 text-right">
+            <button
+              onClick={() => handleDisconnectSession(session.username)}
+              disabled={isDisconnecting}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Disconnect"
+            >
+              {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+            </button>
+          </td>
+        </>
+      );
+    };
+
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-slate-500">{total} active sessions</p>
+          <Button variant="outline" size="sm" onClick={refetchSessions}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+        </div>
+        {renderPaginatedTable({
+          data: sessions,
+          total,
+          page: sessionPage,
+          setPage: setSessionPage,
+          limit: sessionLimit,
+          setLimit: setSessionLimit,
+          search: sessionSearch,
+          setSearch: setSessionSearch,
+          searchPlaceholder: 'Search by username...',
+          loading: sessionsLoading,
+          columns,
+          renderRow,
+          keyField: 'username',
+          emptyMessage: 'No active sessions',
+        })}
+      </div>
+    );
+  };
+
+  // Profiles tab
+  const renderProfilesTab = () => {
+    const profiles = profileData?.data || [];
+    const total = profileData?.total || 0;
+
+    const columns = [
+      { key: 'name', label: 'Name' },
+      { key: 'localAddress', label: 'Local Address' },
+      { key: 'remoteAddress', label: 'Remote Address' },
+      { key: 'rateLimit', label: 'Rate Limit' },
+      { key: 'comment', label: 'Comment' },
+    ];
+
+    const renderRow = (profile) => (
+      <>
+        <td className="px-4 py-3 text-sm font-semibold text-slate-900">{profile.name}</td>
+        <td className="px-4 py-3 text-sm font-mono text-slate-600">{profile.localAddress || '-'}</td>
+        <td className="px-4 py-3 text-sm font-mono text-slate-600">{profile.remoteAddress || '-'}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{profile.rateLimit || '-'}</td>
+        <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{profile.comment || '-'}</td>
+      </>
+    );
+
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-slate-500">{total} profiles</p>
+          <Button variant="outline" size="sm" onClick={refetchProfiles}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+        </div>
+        {renderPaginatedTable({
+          data: profiles,
+          total,
+          page: profilePage,
+          setPage: setProfilePage,
+          limit: profileLimit,
+          setLimit: setProfileLimit,
+          search: profileSearch,
+          setSearch: setProfileSearch,
+          searchPlaceholder: 'Search by name or comment...',
+          loading: profilesLoading,
+          columns,
+          renderRow,
+          keyField: 'name',
+          emptyMessage: 'No profiles found',
+        })}
+      </div>
+    );
+  };
+
+  // Queues tab
+  const renderQueuesTab = () => {
+    const queues = queueData?.data || [];
+    const total = queueData?.total || 0;
+
+    const columns = [
+      { key: 'name', label: 'Name' },
+      { key: 'target', label: 'Target' },
+      { key: 'maxLimit', label: 'Max Limit' },
+      { key: 'status', label: 'Status' },
+      { key: 'comment', label: 'Comment' },
+    ];
+
+    const renderRow = (queue) => (
+      <>
+        <td className="px-4 py-3 text-sm font-semibold text-slate-900">{queue.name}</td>
+        <td className="px-4 py-3 text-sm font-mono text-slate-600">{queue.target}</td>
+        <td className="px-4 py-3 text-sm text-slate-600">{queue.maxLimit}</td>
+        <td className="px-4 py-3">
+          {queue.disabled ? (
+            <Badge variant="danger">Disabled</Badge>
+          ) : (
+            <Badge variant="success">Enabled</Badge>
+          )}
+        </td>
+        <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{queue.comment || '-'}</td>
+      </>
+    );
+
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-slate-500">{total} queues</p>
+          <Button variant="outline" size="sm" onClick={refetchQueues}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+        </div>
+        {renderPaginatedTable({
+          data: queues,
+          total,
+          page: queuePage,
+          setPage: setQueuePage,
+          limit: queueLimit,
+          setLimit: setQueueLimit,
+          search: queueSearch,
+          setSearch: setQueueSearch,
+          searchPlaceholder: 'Search by name or comment...',
+          loading: queuesLoading,
+          columns,
+          renderRow,
+          keyField: 'name',
+          emptyMessage: 'No queues found',
+        })}
+      </div>
+    );
+  };
+
+  // --- Main render ---
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <button
+            onClick={() => navigate('/routers')}
+            className="text-sm text-primary hover:underline mb-1"
+          >
+            ← Back to Routers
+          </button>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center space-x-3">
+            <Server className="w-6 h-6 text-primary" />
+            <span>{router.name}</span>
+            <Badge variant={router.isActive ? 'success' : 'danger'}>
+              {router.isActive ? 'Active' : 'Inactive'}
+            </Badge>
+          </h1>
+          <p className="text-sm text-slate-500 font-mono">
+            {router.ipAddress}:{router.apiPort}
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh}>
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh All</span>
+        </Button>
+      </div>
+
+      {/* Mock Mode Warning Banner */}
+      {isMockMode && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center space-x-2 text-amber-800">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm">
+            <strong>Mock Mode Active:</strong> All MikroTik operations are simulated. No real router changes are applied.
+          </p>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="border-b border-slate-200">
+        <nav className="flex space-x-4 overflow-x-auto">
+          {[
+            { id: 'info', label: 'Info', icon: Info },
+            { id: 'pppoe', label: 'PPPoE Secrets', icon: Users },
+            { id: 'sessions', label: 'Active Sessions', icon: Activity },
+            { id: 'profiles', label: 'Profiles', icon: Layers },
+            { id: 'queues', label: 'Queues', icon: BarChart3 },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center space-x-2 py-3 px-2 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab content */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 lg:p-6">
+        {activeTab === 'info' && renderInfoTab()}
+        {activeTab === 'pppoe' && renderPppoeTab()}
+        {activeTab === 'sessions' && renderSessionsTab()}
+        {activeTab === 'profiles' && renderProfilesTab()}
+        {activeTab === 'queues' && renderQueuesTab()}
+      </div>
+
+      {/* PPPoE Form Modal */}
+      <Modal
+        isOpen={isPppoeFormOpen}
+        onClose={() => { setIsPppoeFormOpen(false); setEditingPppoe(null); }}
+        title={editingPppoe ? 'Edit PPPoE Secret' : 'Add PPPoE Secret'}
+      >
+        <PppoeForm
+          initialData={editingPppoe}
+          onSubmit={handlePppoeSubmit}
+          isLoading={createPppoeMutation.isPending || updatePppoeMutation.isPending}
+          onCancel={() => { setIsPppoeFormOpen(false); setEditingPppoe(null); }}
+        />
+      </Modal>
+    </div>
+  );
+}
+
+// PPPoE Form Component
+function PppoeForm({ initialData, onSubmit, isLoading, onCancel }) {
+  const [formData, setFormData] = useState({
+    username: initialData?.name || '',
+    password: '',
+    profile: initialData?.profile || 'default',
+    comment: initialData?.comment || '',
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          Username <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.username}
+          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          required
+          disabled={!!initialData}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          Password {!initialData && <span className="text-red-500">*</span>}
+        </label>
+        <input
+          type="text"
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          required={!initialData}
+          placeholder={initialData ? 'Leave blank to keep current' : 'Enter password'}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          Profile <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.profile}
+          onChange={(e) => setFormData({ ...formData, profile: e.target.value })}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Comment</label>
+        <input
+          type="text"
+          value={formData.comment}
+          onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+        <Button variant="outline" onClick={onCancel} type="button">Cancel</Button>
+        <Button type="submit" isLoading={isLoading}>
+          {initialData ? 'Update Secret' : 'Create Secret'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+-------------------------------------------------------------------
 FILE: ./frontend/src/pages/RoutersPage.jsx
 -------------------------------------------------------------------
-// FILE: ./frontend/src/pages/RoutersPage.jsx
+// frontend/src/pages/RoutersPage.jsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { routerApi } from '../services/routerApi';
 import { settingsApi } from '../services/settingsApi';
-import { Plus, Edit, Trash2, TestTube, Server, Users, CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
+import {
+  Plus, Edit, Trash2, TestTube, Server, Users,
+  CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight,
+  AlertTriangle, Eye
+} from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -14347,6 +15702,7 @@ import RouterForm from '../components/RouterForm';
 import toast from 'react-hot-toast';
 
 export default function RoutersPage() {
+  const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRouter, setEditingRouter] = useState(null);
   const [testingId, setTestingId] = useState(null);
@@ -14413,13 +15769,11 @@ export default function RoutersPage() {
   const handleToggleMockMode = () => {
     const currentMode = mockModeData?.mockMode ?? true;
     const newMode = !currentMode;
-    
     if (!newMode) {
       if (!window.confirm('Disable Mock Mode? This will connect to REAL MikroTik routers. Ensure your routers are configured correctly.')) {
         return;
       }
     }
-    
     toggleMockModeMutation.mutate(newMode);
   };
 
@@ -14453,7 +15807,7 @@ export default function RoutersPage() {
                 MikroTik {isMockMode ? 'Mock Mode' : 'Live Mode'}
               </h3>
               <p className={`text-sm ${isMockMode ? 'text-amber-700' : 'text-green-700'}`}>
-                {isMockMode 
+                {isMockMode
                   ? 'Simulating router operations without connecting to real hardware'
                   : 'Connected to real MikroTik routers via RouterOS API'}
               </p>
@@ -14463,8 +15817,8 @@ export default function RoutersPage() {
             onClick={handleToggleMockMode}
             disabled={toggleMockModeMutation.isPending || mockModeLoading}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-              isMockMode 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
+              isMockMode
+                ? 'bg-green-600 hover:bg-green-700 text-white'
                 : 'bg-amber-600 hover:bg-amber-700 text-white'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
@@ -14530,16 +15884,23 @@ export default function RoutersPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => navigate(`/routers/${router.id}`)}
+                  className="flex-1"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Details</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleTest(router.id)}
                   disabled={testingId === router.id}
-                  className="flex-1"
                 >
                   {testingId === router.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <TestTube className="w-4 h-4" />
                   )}
-                  <span>Test</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -14583,12 +15944,15 @@ export default function RoutersPage() {
 -------------------------------------------------------------------
 FILE: ./frontend/src/pages/SettingsPage.jsx
 -------------------------------------------------------------------
+// frontend/src/pages/SettingsPage.jsx
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi } from '../services/userApi';
-import { User, Lock, Save, Shield } from 'lucide-react';
+import { settingsApi } from '../services/settingsApi';
+import { User, Lock, Shield, Save, Smartphone, Moon, Sun, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
 import Button from '../components/Button';
 import useAuthStore from '../store/authStore';
+import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
@@ -14601,9 +15965,22 @@ export default function SettingsPage() {
       </div>
       <div className="bg-white rounded-xl border border-slate-200">
         <div className="border-b border-slate-200">
-          <nav className="flex space-x-4 px-6">
-            {[{ id: 'profile', label: 'Profile', icon: User }, { id: 'password', label: 'Password', icon: Lock }, { id: 'security', label: 'Security', icon: Shield }].map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center space-x-2 py-4 px-2 border-b-2 text-sm font-medium transition-colors ${activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+          <nav className="flex space-x-4 px-6 overflow-x-auto">
+            {[
+              { id: 'profile', label: 'Profile', icon: User },
+              { id: 'password', label: 'Password', icon: Lock },
+              { id: 'security', label: 'Security', icon: Shield },
+              { id: 'system', label: 'System', icon: Smartphone },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 py-4 px-2 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
               </button>
@@ -14614,6 +15991,7 @@ export default function SettingsPage() {
           {activeTab === 'profile' && <ProfileTab />}
           {activeTab === 'password' && <PasswordTab />}
           {activeTab === 'security' && <SecurityInfo />}
+          {activeTab === 'system' && <SystemTab />}
         </div>
       </div>
     </div>
@@ -14698,6 +16076,7 @@ function SecurityInfo() {
           <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>JWT token authentication</span></li>
           <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>Role-based access control</span></li>
           <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>Audit logging enabled</span></li>
+          <li className="flex items-center space-x-2"><span className="text-green-600">✓</span><span>Rate limiting active</span></li>
         </ul>
       </div>
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
@@ -14707,6 +16086,98 @@ function SecurityInfo() {
           <div className="flex justify-between"><span className="text-slate-500">Role</span><span className="font-medium text-slate-900">{user?.role}</span></div>
           <div className="flex justify-between"><span className="text-slate-500">Token Storage</span><span className="font-medium text-slate-900">localStorage</span></div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SystemTab() {
+  const queryClient = useQueryClient();
+  const { theme, toggleTheme } = useTheme();
+
+  // Fetch SMS mock mode
+  const { data: smsMockData, isLoading: smsLoading } = useQuery({
+    queryKey: ['smsMockMode'],
+    queryFn: () => settingsApi.getSmsMockMode().then(res => res.data.data),
+  });
+
+  const toggleSmsMockMutation = useMutation({
+    mutationFn: (enabled) => settingsApi.setSmsMockMode(enabled),
+    onSuccess: (res) => {
+      const newMode = res.data.data.mockMode;
+      queryClient.setQueryData(['smsMockMode'], { mockMode: newMode });
+      toast.success(newMode ? 'SMS Mock Mode enabled' : 'SMS Mock Mode disabled');
+    },
+    onError: (error) => toast.error(error.response?.data?.message || 'Failed to toggle SMS mock mode'),
+  });
+
+  const isSmsMock = smsMockData?.mockMode ?? true;
+
+  const handleToggleSmsMock = () => {
+    toggleSmsMockMutation.mutate(!isSmsMock);
+  };
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <h3 className="text-lg font-semibold text-slate-900">System Settings</h3>
+
+      {/* Dark Mode Toggle */}
+      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="flex items-center space-x-3">
+          {theme === 'light' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-400" />}
+          <div>
+            <p className="font-medium text-slate-900">Dark Mode</p>
+            <p className="text-sm text-slate-500">Toggle between light and dark theme</p>
+          </div>
+        </div>
+        <button
+          onClick={toggleTheme}
+          className="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-300 dark:bg-slate-600 transition-colors focus:outline-none"
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* SMS Mock Mode Toggle */}
+      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="flex items-center space-x-3">
+          <Smartphone className="w-5 h-5 text-primary" />
+          <div>
+            <p className="font-medium text-slate-900">SMS Mock Mode</p>
+            <p className="text-sm text-slate-500">
+              {isSmsMock
+                ? 'Simulate SMS sending without real carrier'
+                : 'Send real SMS messages (requires integration)'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleToggleSmsMock}
+          disabled={toggleSmsMockMutation.isPending || smsLoading}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+            isSmsMock
+              ? 'bg-amber-600 hover:bg-amber-700 text-white'
+              : 'bg-green-600 hover:bg-green-700 text-white'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {toggleSmsMockMutation.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : isSmsMock ? (
+            <>
+              <ToggleRight className="w-5 h-5" />
+              <span>Mock Mode ON</span>
+            </>
+          ) : (
+            <>
+              <ToggleLeft className="w-5 h-5" />
+              <span>Live Mode ON</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -15012,6 +16483,7 @@ export const invoiceApi = {
 -------------------------------------------------------------------
 FILE: ./frontend/src/services/notificationApi.js
 -------------------------------------------------------------------
+// frontend/src/services/notificationApi.js
 import api from './api';
 
 export const notificationApi = {
@@ -15022,6 +16494,7 @@ export const notificationApi = {
   },
   markAsRead: (id) => api.post(`/notifications/${id}/read`),
   markAllAsRead: () => api.post('/notifications/mark-all-read'),
+  sendReminders: () => api.post('/notifications/send-reminders'), // NEW
 };
 -------------------------------------------------------------------
 FILE: ./frontend/src/services/packageApi.js
@@ -15057,6 +16530,7 @@ export const paymentApi = {
 -------------------------------------------------------------------
 FILE: ./frontend/src/services/routerApi.js
 -------------------------------------------------------------------
+// frontend/src/services/routerApi.js
 import api from './api';
 
 export const routerApi = {
@@ -15069,6 +16543,44 @@ export const routerApi = {
   getLiveStatus: () => api.get('/routers/live-status'),
   bulkSuspend: (customerIds) => api.post('/routers/bulk/suspend', { customerIds }),
   bulkRestore: (customerIds) => api.post('/routers/bulk/restore', { customerIds }),
+
+  // Router info
+  getRouterInfo: (id) => api.get(`/routers/${id}/info`),
+
+  // PPPoE secrets (paginated)
+  getPppoeSecretsPaginated: (id, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/routers/${id}/pppoe-secrets/paginated${query ? `?${query}` : ''}`);
+  },
+  createPppoeSecret: (id, data) => api.post(`/routers/${id}/pppoe-secrets`, data),
+  updatePppoeSecret: (id, username, data) => api.put(`/routers/${id}/pppoe-secrets/${username}`, data),
+  deletePppoeSecret: (id, username) => api.delete(`/routers/${id}/pppoe-secrets/${username}`),
+  togglePppoeSecret: (id, username, disable) => api.post(`/routers/${id}/pppoe-secrets/${username}/toggle`, { disable }),
+
+  // Active sessions (paginated)
+  getActiveSessionsPaginated: (id, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/routers/${id}/active-sessions/paginated${query ? `?${query}` : ''}`);
+  },
+  removeActiveSession: (id, username) => api.delete(`/routers/${id}/active-sessions/${username}`),
+
+  // Profiles (paginated)
+  getProfilesPaginated: (id, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/routers/${id}/profiles/paginated${query ? `?${query}` : ''}`);
+  },
+
+  // Queues (paginated)
+  getSimpleQueuesPaginated: (id, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/routers/${id}/queues/paginated${query ? `?${query}` : ''}`);
+  },
+
+  // Legacy (non-paginated) – kept for backward compatibility
+  getPppoeSecrets: (id) => api.get(`/routers/${id}/pppoe-secrets`),
+  getActiveSessions: (id) => api.get(`/routers/${id}/active-sessions`),
+  getProfiles: (id) => api.get(`/routers/${id}/profiles`),
+  getSimpleQueues: (id) => api.get(`/routers/${id}/queues`),
 };
 -------------------------------------------------------------------
 FILE: ./frontend/src/services/settingsApi.js
@@ -15120,6 +16632,55 @@ const useAuthStore = create((set) => ({
 }));
 
 export default useAuthStore;
+-------------------------------------------------------------------
+FILE: ./frontend/src/utils/export.js
+-------------------------------------------------------------------
+// frontend/src/utils/export.js
+
+/**
+ * Export an array of objects to CSV and download
+ * @param {Array} data - Array of objects
+ * @param {Array} columns - Array of { key: string, label: string }
+ * @param {string} filename - Filename without extension
+ */
+export function exportCSV(data, columns, filename = 'export') {
+  if (!data || data.length === 0) {
+    alert('No data to export.');
+    return;
+  }
+
+  // Build header row
+  const headers = columns.map(col => col.label).join(',');
+  // Build data rows
+  const rows = data.map(item => {
+    return columns.map(col => {
+      let value = item[col.key];
+      if (value === null || value === undefined) return '';
+      // Escape commas and quotes
+      if (typeof value === 'string') {
+        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+          value = `"${value.replace(/"/g, '""')}"`;
+        }
+      }
+      // Format numbers or dates if needed
+      if (col.key === 'amount' || col.key === 'total' || col.key === 'price') {
+        value = `"${parseFloat(value).toFixed(2)}"`;
+      }
+      return value;
+    }).join(',');
+  });
+
+  const csvContent = [headers, ...rows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.setAttribute('download', `${filename}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 -------------------------------------------------------------------
 FILE: ./frontend/tailwind.config.js
 -------------------------------------------------------------------

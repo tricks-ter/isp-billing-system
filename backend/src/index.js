@@ -1,10 +1,9 @@
-// backend/src/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit'); // NEW
+const rateLimit = require('express-rate-limit');
 
 // Import all route modules
 const authRoutes = require('./routes/authRoutes');
@@ -22,10 +21,10 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- Rate Limiting (NEW) ---
+// --- Rate Limiting ---
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
@@ -34,12 +33,19 @@ app.use(limiter);
 
 // --- Middleware ---
 app.use(helmet());
+
+// FIXED: Proper CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://isp-billing-frontend-0f1m.onrender.com',
+  'http://localhost:5173'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL || 'https://yourdomain.com' ||'https://isp-billing-frontend-0f1m.onrender.com/login'||'https://isp-billing-frontend-0f1m.onrender.com/'
-    : 'http://localhost:5173',
+  origin: process.env.NODE_ENV === 'production' ? allowedOrigins : 'http://localhost:5173',
   credentials: true,
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
@@ -82,5 +88,5 @@ app.listen(PORT, () => {
   console.log(`🚀 ISP Billing API running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔧 MikroTik Mock Mode: ${process.env.MIKROTIK_MOCK_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
-  console.log(`📱 SMS Mock Mode: ${process.env.SMS_MOCK_MODE !== 'false' ? 'ENABLED' : 'DISABLED'}`);
+  console.log(` SMS Mock Mode: ${process.env.SMS_MOCK_MODE !== 'false' ? 'ENABLED' : 'DISABLED'}`);
 });

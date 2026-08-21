@@ -1,5 +1,5 @@
 // frontend/src/components/Login.jsx
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Wifi, Loader2 } from 'lucide-react';
 import { z } from 'zod';
@@ -15,21 +15,17 @@ const loginSchema = z.object({
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ username: '', password: '' });
   const [errors, setErrors] = useState({ username: '', password: '' });
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for that field when user types
-    setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    const username = usernameRef.current.value;
+    const password = passwordRef.current.value;
+    const formData = { username, password };
 
     // Validate using Zod
     const result = loginSchema.safeParse(formData);
@@ -39,10 +35,10 @@ export default function Login() {
         fieldErrors[err.path[0]] = err.message;
       });
       setErrors(fieldErrors);
-      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     try {
       const response = await authApi.login(formData);
       const { token, user } = response.data.data;
@@ -75,13 +71,12 @@ export default function Login() {
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-                name="username"
+                ref={usernameRef}
                 type="text"
                 autoComplete="username"
-                value={formData.username}
-                onChange={handleChange}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="admin"
+                onChange={() => setErrors((prev) => ({ ...prev, username: '' }))}
               />
             </div>
             {errors.username && (
@@ -95,13 +90,12 @@ export default function Login() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-                name="password"
+                ref={passwordRef}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange}
                 className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                 placeholder="••••••••"
+                onChange={() => setErrors((prev) => ({ ...prev, password: '' }))}
               />
               <button
                 type="button"

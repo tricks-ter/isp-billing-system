@@ -1,4 +1,3 @@
-// backend/src/services/routerService.js
 const prisma = require('../config/db');
 const mikrotikService = require('./mikrotikService');
 
@@ -42,6 +41,7 @@ class RouterService {
         isActive: true,
       },
     });
+
     await prisma.auditLog.create({
       data: {
         userId,
@@ -49,6 +49,7 @@ class RouterService {
         details: JSON.stringify({ routerId: router.id, name: router.name }),
       },
     });
+
     return router;
   }
 
@@ -57,6 +58,7 @@ class RouterService {
       where: { id: parseInt(id) },
     });
     if (!router) throw new Error('Router not found');
+
     const updatedRouter = await prisma.router.update({
       where: { id: parseInt(id) },
       data: {
@@ -68,6 +70,7 @@ class RouterService {
         isActive: data.isActive !== undefined ? data.isActive : router.isActive,
       },
     });
+
     await prisma.auditLog.create({
       data: {
         userId,
@@ -75,6 +78,7 @@ class RouterService {
         details: JSON.stringify({ routerId: updatedRouter.id, changes: data }),
       },
     });
+
     return updatedRouter;
   }
 
@@ -89,7 +93,9 @@ class RouterService {
     if (router._count.customers > 0) {
       throw new Error('Cannot delete router with assigned customers. Reassign customers first.');
     }
+
     await prisma.router.delete({ where: { id: parseInt(id) } });
+
     await prisma.auditLog.create({
       data: {
         userId,
@@ -97,6 +103,7 @@ class RouterService {
         details: JSON.stringify({ routerId: router.id, name: router.name }),
       },
     });
+
     return { success: true };
   }
 
@@ -123,13 +130,14 @@ class RouterService {
         routerName: customer.router?.name || 'No Router',
         routerIp: customer.router?.ipAddress || '-',
         isOnline: customer.routerId ? (Math.random() > 0.2) : false,
-        uptime: customer.routerId && Math.random() > 0.2 
-          ? `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m` 
+        uptime: customer.routerId && Math.random() > 0.2
+          ? `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`
           : '-',
-        ipAddress: customer.routerId 
-          ? `192.168.88.${Math.floor(Math.random() * 254) + 1}` 
+        ipAddress: customer.routerId
+          ? `192.168.88.${Math.floor(Math.random() * 254) + 1}`
           : '-',
       }));
+
       return {
         total: customersWithStatus.length,
         online: customersWithStatus.filter(c => c.isOnline).length,
@@ -138,17 +146,28 @@ class RouterService {
       };
     }
 
-    // REAL IMPLEMENTATION
+    // REAL IMPLEMENTATION - with timeout protection
     const routers = await prisma.router.findMany({ where: { isActive: true } });
     const allActiveSessions = [];
-    for (const router of routers) {
+
+    // Fetch sessions concurrently with timeout
+    const sessionPromises = routers.map(async (router) => {
       try {
-        const sessions = await mikrotikService.getActiveSessions(router);
-        allActiveSessions.push(...sessions);
+        const sessions = await Promise.race([
+          mikrotikService.getActiveSessions(router),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 5000)
+          )
+        ]);
+        return sessions;
       } catch (error) {
         console.error(`Failed to fetch sessions from ${router.name}:`, error.message);
+        return [];
       }
-    }
+    });
+
+    const sessionsResults = await Promise.all(sessionPromises);
+    sessionsResults.forEach(sessions => allActiveSessions.push(...sessions));
 
     const customersWithStatus = customers.map(c => {
       const session = allActiveSessions.find(s => s.username === c.pppoeUsername);
@@ -172,7 +191,6 @@ class RouterService {
     };
   }
 
-  // --- Router Info ---
   async getRouterInfo(id) {
     const router = await prisma.router.findUnique({
       where: { id: parseInt(id) },
@@ -181,7 +199,6 @@ class RouterService {
     return await mikrotikService.getRouterInfo(router);
   }
 
-  // --- PPPoE Management (paginated) ---
   async getPppoeSecretsPaginated(routerId, page, limit, search, status) {
     const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
@@ -218,7 +235,6 @@ class RouterService {
     return mikrotikService.togglePppoeSecret(router, username, disable);
   }
 
-  // --- Active Sessions (paginated) ---
   async getActiveSessionsPaginated(routerId, page, limit, search) {
     const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
@@ -231,23 +247,21 @@ class RouterService {
     return mikrotikService.removeActiveSession(router, username);
   }
 
-  // --- Profiles (paginated) ---
   async getProfilesPaginated(routerId, page, limit, search) {
     const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
     return mikrotikService.getProfilesPaginated(router, page, limit, search);
   }
 
-  // --- Queues (paginated) ---
   async getSimpleQueuesPaginated(routerId, page, limit, search) {
     const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');
     return mikrotikService.getSimpleQueuesPaginated(router, page, limit, search);
   }
 
-  // --- Bulk operations ---
   async bulkSuspend(customerIds, userId) {
     const results = { success: 0, failed: 0, errors: [] };
+
     for (const id of customerIds) {
       try {
         const customer = await prisma.customer.findUnique({
@@ -264,23 +278,24 @@ class RouterService {
           results.errors.push({ id, error: 'Already suspended' });
           continue;
         }
+
         await prisma.customer.update({
           where: { id: parseInt(id) },
           data: { status: 'SUSPENDED' },
         });
+
         if (customer.routerId && customer.router) {
-          try {
-            await mikrotikService.disablePppoeSecret(customer.router, customer.pppoeUsername);
-          } catch (error) {
-            console.error(`Failed to disable on router for customer ${id}:`, error);
-          }
+          mikrotikService.disablePppoeSecret(customer.router, customer.pppoeUsername)
+            .catch(error => console.error(`Failed to disable on router for customer ${id}:`, error));
         }
+
         results.success++;
       } catch (error) {
         results.failed++;
         results.errors.push({ id, error: error.message });
       }
     }
+
     await prisma.auditLog.create({
       data: {
         userId,
@@ -288,11 +303,13 @@ class RouterService {
         details: JSON.stringify({ customerIds, results }),
       },
     });
+
     return results;
   }
 
   async bulkRestore(customerIds, userId) {
     const results = { success: 0, failed: 0, errors: [] };
+
     for (const id of customerIds) {
       try {
         const customer = await prisma.customer.findUnique({
@@ -309,23 +326,24 @@ class RouterService {
           results.errors.push({ id, error: 'Already active' });
           continue;
         }
+
         await prisma.customer.update({
           where: { id: parseInt(id) },
           data: { status: 'ACTIVE' },
         });
+
         if (customer.routerId && customer.router) {
-          try {
-            await mikrotikService.enablePppoeSecret(customer.router, customer.pppoeUsername);
-          } catch (error) {
-            console.error(`Failed to enable on router for customer ${id}:`, error);
-          }
+          mikrotikService.enablePppoeSecret(customer.router, customer.pppoeUsername)
+            .catch(error => console.error(`Failed to enable on router for customer ${id}:`, error));
         }
+
         results.success++;
       } catch (error) {
         results.failed++;
         results.errors.push({ id, error: error.message });
       }
     }
+
     await prisma.auditLog.create({
       data: {
         userId,
@@ -333,10 +351,11 @@ class RouterService {
         details: JSON.stringify({ customerIds, results }),
       },
     });
+
     return results;
   }
 
-  // Legacy non-paginated methods (kept for backward compatibility)
+  // Legacy non-paginated methods
   async getPppoeSecrets(routerId) {
     const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
     if (!router) throw new Error('Router not found');

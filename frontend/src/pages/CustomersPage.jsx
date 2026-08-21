@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerApi } from '../services/customerApi';
 import { packageApi } from '../services/packageApi';
-import { Plus, Search, Edit, Trash2, Pause, Play, Users } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Pause, Play, Users, RefreshCw } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -16,9 +16,10 @@ export default function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['customers', { page, search }],
     queryFn: () => customerApi.getAll({ page, limit: 20, search }).then(res => res.data.data),
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: packagesData } = useQuery({
@@ -69,14 +70,21 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
+          <p className="text-sm text-slate-500 mt-1">
             {data?.pagination?.total || 0} total customers
           </p>
         </div>
-        <Button onClick={() => { setEditingCustomer(null); setIsFormOpen(true); }}>
-          <Plus className="w-4 h-4" />
-          <span>Add Customer</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh</span>
+          </Button>
+          <Button onClick={() => { setEditingCustomer(null); setIsFormOpen(true); }}>
+            <Plus className="w-4 h-4" />
+            <span>Add Customer</span>
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -123,7 +131,7 @@ export default function CustomersPage() {
                     <td className="px-6 py-4 text-sm text-slate-600">{customer.phone}</td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-slate-900">{customer.package?.name}</div>
-                      <div className="text-xs text-slate-500">{customer.package?.price}/mo</div>
+                      <div className="text-xs text-slate-500">৳{customer.package?.price}/mo</div>
                     </td>
                     <td className="px-6 py-4">
                       {customer.router ? (
@@ -198,7 +206,6 @@ export default function CustomersPage() {
                   <p className="text-sm text-slate-500">{customer.phone}</p>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                 <div>
                   <p className="text-xs text-slate-500">Package</p>
@@ -217,7 +224,6 @@ export default function CustomersPage() {
                   <p className="font-mono text-slate-700 text-xs">{customer.pppoeUsername}</p>
                 </div>
               </div>
-
               <div className="flex items-center space-x-2 pt-3 border-t border-slate-100">
                 {customer.status === 'ACTIVE' ? (
                   <Button
@@ -291,6 +297,7 @@ export default function CustomersPage() {
           onSuccess={() => {
             setIsFormOpen(false);
             queryClient.invalidateQueries(['customers']);
+            toast.success('Customer created successfully!');
           }}
           onCancel={() => setIsFormOpen(false)}
         />
