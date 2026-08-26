@@ -35,7 +35,7 @@ export default function CustomersPage() {
     refetchInterval: 10000,
   });
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['customers', { page, search }],
     queryFn: () => customerApi.getAll({ page, limit: 50, search }).then(res => res.data.data),
     staleTime: 10000,
@@ -138,11 +138,18 @@ export default function CustomersPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { refetch(); refetchSummary(); }}>
-            <RefreshCw className="w-4 h-4" />
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await Promise.all([refetch(), refetchSummary()]);
+              toast.success('Customer directory refreshed');
+            }}
+            className="cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </Button>
-          <Button onClick={() => { setEditingCustomer(null); setIsFormOpen(true); }}>
+          <Button onClick={() => { setEditingCustomer(null); setIsFormOpen(true); }} className="cursor-pointer">
             <Plus className="w-4 h-4" />
             <span>Add Customer</span>
           </Button>

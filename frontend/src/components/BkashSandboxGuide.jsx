@@ -90,3 +90,4 @@ export default function BkashSandboxGuide({ compact = false }) {
     </div>
   );
 }
+

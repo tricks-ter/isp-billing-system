@@ -13,11 +13,16 @@ export default function LiveStatusPage() {
   const [routerFilter, setRouterFilter] = useState('all');
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['liveStatus'],
     queryFn: () => routerApi.getLiveStatus().then(res => res.data.data),
     refetchInterval: 30000,
   });
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Live connection status refreshed');
+  };
 
   const routersSummary = useMemo(() => {
     if (!data?.customers) return [];
@@ -111,8 +116,8 @@ export default function LiveStatusPage() {
           <h1 className="text-2xl font-bold text-slate-900">Live Status</h1>
           <p className="text-sm text-slate-500 mt-1">Real-time customer connection status</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCw className="w-4 h-4" />
+        <Button variant="outline" onClick={handleRefresh} className="cursor-pointer">
+          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
         </Button>
       </div>

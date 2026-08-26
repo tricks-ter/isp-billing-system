@@ -26,7 +26,7 @@ export default function TicketsPage() {
     refetchInterval: 10000,
   });
 
-  const { data: ticketsData, isLoading, refetch: refetchTickets } = useQuery({
+  const { data: ticketsData, isLoading, isFetching, refetch: refetchTickets } = useQuery({
     queryKey: ['adminTickets', search, statusFilter, priorityFilter],
     queryFn: () => ticketApi.getAll({
       search,
@@ -124,10 +124,13 @@ export default function TicketsPage() {
         </div>
 
         <button
-          onClick={() => { refetchStats(); refetchTickets(); }}
+          onClick={async () => {
+            await Promise.all([refetchStats(), refetchTickets()]);
+            toast.success('Support tickets refreshed');
+          }}
           className="inline-flex items-center space-x-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors w-fit cursor-pointer"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
           <span>Refresh Desk</span>
         </button>
       </div>

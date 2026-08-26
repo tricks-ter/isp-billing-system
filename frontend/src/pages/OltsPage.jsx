@@ -23,7 +23,7 @@ export default function OltsPage() {
   const [syncingId, setSyncingId] = useState(null);
 
   // Fetch all OLTs
-  const { data: olts, isLoading, refetch } = useQuery({
+  const { data: olts, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['olts'],
     queryFn: () => oltApi.getAll().then((res) => res.data.data),
     staleTime: 30000,
@@ -119,11 +119,18 @@ export default function OltsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4 mr-1.5" />
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await refetch();
+              toast.success('OLT devices refreshed');
+            }}
+            className="cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </Button>
-          <Button onClick={() => { setEditingOlt(null); setIsFormOpen(true); }}>
+          <Button onClick={() => { setEditingOlt(null); setIsFormOpen(true); }} className="cursor-pointer">
             <Plus className="w-4 h-4 mr-1.5" />
             <span>Add OLT</span>
           </Button>

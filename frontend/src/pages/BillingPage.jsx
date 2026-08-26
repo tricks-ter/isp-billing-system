@@ -39,7 +39,7 @@ export default function BillingPage() {
   const queryClient = useQueryClient();
 
   // Fetch invoices
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['invoices', { month, statusFilter, page }],
     queryFn: () => invoiceApi.getAll({ month, status: statusFilter, page, limit: 20 }).then(res => res.data.data),
   });
@@ -181,7 +181,7 @@ export default function BillingPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-slate-100">
             Billing &amp; Invoices
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -189,11 +189,25 @@ export default function BillingPage() {
           </p>
         </div>
 
-        {/* Date Format Toggle */}
-        <div className="flex items-center space-x-2">
+        {/* Header Controls */}
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await Promise.all([refetch(), queryClient.invalidateQueries(['invoiceSummary'])]);
+              toast.success('Invoices refreshed');
+            }}
+            className="cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </Button>
+
+          {/* Date Format Toggle */}
           <button
             onClick={() => setDateFormatMode(dateFormatMode === 'month' ? 'exact' : 'month')}
             className="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center space-x-2 cursor-pointer shadow-sm"
+            title="Switch date format display"
           >
             {dateFormatMode === 'month' ? (
               <>
@@ -213,51 +227,51 @@ export default function BillingPage() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500 mb-1">Billing Period</p>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-bold uppercase">Billing Period</p>
             <p className="text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
               {formatMonthName(summary.month)}
             </p>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500 mb-1">Total Invoiced</p>
-            <p className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 font-bold uppercase">Total Invoiced</p>
+            <p className="text-xl lg:text-2xl font-black text-slate-900 dark:text-slate-100">
               ৳{summary.totalAmount.toLocaleString()}
             </p>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/30 p-4 shadow-sm">
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Collected</p>
-            <p className="text-xl lg:text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/30 p-4 shadow-sm">
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold uppercase">Collected</p>
+            <p className="text-xl lg:text-2xl font-black text-emerald-700 dark:text-emerald-400">
               ৳{summary.totalPaid.toLocaleString()}
             </p>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50/50 dark:bg-rose-950/30 p-4 shadow-sm">
-            <p className="text-xs text-rose-600 dark:text-rose-400 mb-1">Outstanding Due</p>
-            <p className="text-xl lg:text-2xl font-bold text-rose-700 dark:text-rose-400">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-rose-200 dark:border-rose-800/60 bg-rose-50/50 dark:bg-rose-950/30 p-4 shadow-sm">
+            <p className="text-xs text-rose-600 dark:text-rose-400 mb-1 font-bold uppercase">Outstanding Due</p>
+            <p className="text-xl lg:text-2xl font-black text-rose-700 dark:text-rose-400">
               ৳{summary.totalDue.toLocaleString()}
             </p>
           </div>
         </div>
       )}
 
-      {/* Controls & Batch Action Bar */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 lg:p-4 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block font-bold">Month</label>
+      {/* Controls & Action Bar */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block font-bold">Billing Month</label>
             <input
               type="month"
               value={month}
               onChange={(e) => { setMonth(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
-          <div className="flex-1">
+          <div>
             <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block font-bold">Status Filter</label>
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="">All Statuses</option>
               <option value="UNPAID">Unpaid</option>
@@ -265,8 +279,11 @@ export default function BillingPage() {
               <option value="PAID">Paid</option>
             </select>
           </div>
-          <div className="flex items-end space-x-2 flex-wrap gap-2 pt-2 sm:pt-0">
-            <Button onClick={() => setIsGenerateOpen(true)} className="whitespace-nowrap cursor-pointer">
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/80">
+          <div className="flex items-center space-x-2 flex-wrap gap-2">
+            <Button onClick={() => setIsGenerateOpen(true)} className="cursor-pointer">
               <Plus className="w-4 h-4" />
               <span>Generate Invoices</span>
             </Button>
@@ -276,12 +293,15 @@ export default function BillingPage() {
                 setBatchDueDate('');
                 setIsBatchDueDateOpen(true);
               }}
-              className="whitespace-nowrap cursor-pointer"
+              className="cursor-pointer"
             >
               <Clock className="w-4 h-4 text-amber-500" />
               <span>Extend Month Due Dates</span>
             </Button>
-            <Button variant="outline" onClick={handleExportCSV} className="whitespace-nowrap cursor-pointer">
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={handleExportCSV} className="cursor-pointer">
               <Download className="w-4 h-4" />
               <span>Export CSV</span>
             </Button>
@@ -289,7 +309,7 @@ export default function BillingPage() {
               variant="outline"
               onClick={() => sendRemindersMutation.mutate()}
               disabled={sendRemindersMutation.isPending}
-              className="whitespace-nowrap cursor-pointer"
+              className="cursor-pointer"
             >
               <Send className="w-4 h-4" />
               <span>Send SMS Alerts</span>

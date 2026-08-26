@@ -31,13 +31,19 @@
     @apply antialiased;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  *, *::before, *::after {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+  input, select, textarea {
+    @apply text-slate-900 dark:text-slate-100;
+  }
+
+  .dark input, .dark select, .dark textarea {
+    color-scheme: dark;
+  }
+
+  .dark option {
+    background-color: #1e293b;
+    color: #f8fafc;
   }
 }
 

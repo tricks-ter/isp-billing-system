@@ -44,3 +44,4 @@ export function formatDisplayDate(dateVal, mode = 'month', includeDay = true) {
     return String(dateVal);
   }
 }
+

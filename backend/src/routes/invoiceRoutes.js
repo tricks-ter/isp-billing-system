@@ -8,9 +8,9 @@ router.use(authMiddleware);
 
 router.get('/', invoiceController.getAll);
 router.get('/summary', invoiceController.getMonthlySummary);
-router.get('/:id', invoiceController.getById);
 router.post('/generate', roleMiddleware('ADMIN', 'MANAGER'), invoiceController.generate);
-router.put('/:id/due-date', roleMiddleware('ADMIN', 'MANAGER'), invoiceController.updateDueDate);
 router.put('/batch/due-date', roleMiddleware('ADMIN', 'MANAGER'), invoiceController.batchUpdateDueDate);
+router.put('/:id/due-date', roleMiddleware('ADMIN', 'MANAGER'), invoiceController.updateDueDate);
+router.get('/:id', invoiceController.getById);
 
 module.exports = router;
