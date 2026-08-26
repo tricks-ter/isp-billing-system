@@ -1,17 +1,30 @@
 // frontend/src/pages/PaymentSuccessPage.jsx
-import { useSearchParams, Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Wifi, ShieldCheck, Printer, ArrowLeft, Calendar, FileText } from 'lucide-react';
+import useCustomerAuthStore from '../store/customerAuthStore';
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const isCustomerAuth = useCustomerAuthStore((state) => state.isAuthenticated);
+
   const trxID = searchParams.get('trxID') || 'N/A';
   const amount = searchParams.get('amount') || '0';
-  const customer = searchParams.get('customer') || 'Valued Customer';
+  const customer = searchParams.get('customer') || 'Valued Subscriber';
   const invoiceId = searchParams.get('invoiceId') || '';
+
+  useEffect(() => {
+    // Invalidate all related queries to force immediate real-time sync across system
+    queryClient.invalidateQueries();
+  }, [queryClient]);
 
   const handlePrint = () => {
     window.print();
   };
+
+  const returnPath = isCustomerAuth ? '/portal/dashboard' : '/dashboard';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 md:p-8">
@@ -85,11 +98,11 @@ export default function PaymentSuccessPage() {
             </button>
 
             <Link
-              to="/dashboard"
-              className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-colors flex items-center justify-center space-x-2"
+              to={returnPath}
+              className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors flex items-center justify-center space-x-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Return Home</span>
+              <span>Return to Dashboard</span>
             </Link>
           </div>
         </div>
@@ -102,4 +115,3 @@ export default function PaymentSuccessPage() {
     </div>
   );
 }
-

@@ -13,34 +13,35 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const firstName = user?.fullName?.split(' ')[0] || 'Admin';
 
-  const { data: customerStats } = useQuery({
+  const { data: customerStats, refetch: refetchStats } = useQuery({
     queryKey: ['customerStats'],
     queryFn: () => customerApi.getStats().then(res => res.data.data),
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
 
-  const { data: allCustomersData } = useQuery({
+  const { data: allCustomersData, refetch: refetchCustomers } = useQuery({
     queryKey: ['allCustomersData'],
     queryFn: () => customerApi.getAll({ page: 1, limit: 100 }).then(res => res.data.data),
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
 
-  const { data: opticalSummary } = useQuery({
+  const { data: opticalSummary, refetch: refetchOptical } = useQuery({
     queryKey: ['opticalSummary'],
     queryFn: () => oltApi.getOpticalSummary().then(res => res.data.data),
-    staleTime: 60000,
+    refetchInterval: 10000,
   });
 
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-  const { data: summaryData } = useQuery({
+  const { data: summaryData, refetch: refetchSummary } = useQuery({
     queryKey: ['invoiceSummary', currentMonth],
     queryFn: () => invoiceApi.getMonthlySummary(currentMonth).then(res => res.data.data),
+    refetchInterval: 5000,
   });
 
-  const { data: activityData, isLoading: activityLoading } = useQuery({
+  const { data: activityData, isLoading: activityLoading, refetch: refetchActivity } = useQuery({
     queryKey: ['recentActivities'],
     queryFn: () => activityApi.getRecent(5).then(res => res.data.data),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   const totalCustomers = customerStats?.total ?? allCustomersData?.pagination?.total ?? (allCustomersData?.customers?.length ?? 0);
@@ -183,8 +184,17 @@ export default function DashboardPage() {
             Here's what's happening with your ISP today
           </p>
         </div>
-        <div className="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
-          📅 {new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        <div className="flex items-center space-x-2.5">
+          <div className="flex items-center space-x-2 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-800">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span>Live Sync Active</span>
+          </div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-medium">
+            📅 {new Date().toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </div>
         </div>
       </div>
 
