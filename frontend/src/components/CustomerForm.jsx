@@ -8,7 +8,7 @@ import { routerApi } from '../services/routerApi';
 import { oltApi } from '../services/oltApi';
 import Button from './Button';
 import toast from 'react-hot-toast';
-import { Server, Layers, Radio } from 'lucide-react';
+import { Server, Layers, Radio, RefreshCw } from 'lucide-react';
 
 const customerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -33,6 +33,8 @@ export default function CustomerForm({ customer, onSuccess, onCancel }) {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(customerSchema),
@@ -233,16 +235,36 @@ export default function CustomerForm({ customer, onSuccess, onCancel }) {
 
       {!isEditing && (
         <div className="border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-600 mb-3">
-            PPPoE Credentials (leave blank to auto-generate)
-          </p>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">PPPoE WiFi Credentials</p>
+              <p className="text-xs text-slate-500">For customer home router dial-up</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const phone = watch('phone') || '';
+                const cleanPhone = phone.replace(/\D/g, '').slice(-6);
+                const suffix = cleanPhone || Math.floor(1000 + Math.random() * 9000);
+                const autoUser = `cust_${suffix}`;
+                const autoPass = Math.random().toString(36).slice(-8);
+                setValue('pppoeUsername', autoUser);
+                setValue('pppoePassword', autoPass);
+                toast.success('Generated unique PPPoE credentials');
+              }}
+              className="px-2.5 py-1 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Auto-Generate</span>
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">PPPoE Username</label>
               <input
                 {...register('pppoeUsername')}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="customer_pppoe"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono text-sm"
+                placeholder="cust_123456"
               />
             </div>
             <div>
@@ -250,7 +272,7 @@ export default function CustomerForm({ customer, onSuccess, onCancel }) {
               <input
                 {...register('pppoePassword')}
                 type="text"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono text-sm"
                 placeholder="password123"
               />
             </div>

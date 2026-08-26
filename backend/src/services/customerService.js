@@ -63,9 +63,29 @@ class CustomerService {
   }
 
   async createCustomer(data, userId) {
+    // Check for existing phone number
+    const existingPhone = await prisma.customer.findUnique({
+      where: { phone: data.phone },
+    });
+    if (existingPhone) {
+      throw new Error(`A customer with phone number '${data.phone}' already exists (${existingPhone.name}).`);
+    }
+
     // Generate PPPoE credentials if not provided
-    const pppoeUsername = data.pppoeUsername || `pppoe_${uuidv4().slice(0, 8)}`;
-    const pppoePassword = data.pppoePassword || uuidv4().slice(0, 12);
+    const pppoeUsername = data.pppoeUsername && data.pppoeUsername.trim() !== ''
+      ? data.pppoeUsername.trim()
+      : `pppoe_${uuidv4().slice(0, 8)}`;
+    const pppoePassword = data.pppoePassword && data.pppoePassword.trim() !== ''
+      ? data.pppoePassword.trim()
+      : uuidv4().slice(0, 12);
+
+    // Check for existing PPPoE username
+    const existingPppoe = await prisma.customer.findUnique({
+      where: { pppoeUsername },
+    });
+    if (existingPppoe) {
+      throw new Error(`PPPoE username '${pppoeUsername}' is already in use. Please choose another username.`);
+    }
 
     // Handle routerId & oltId: convert empty string to null
     const routerId = data.routerId ? parseInt(data.routerId) : null;
@@ -132,6 +152,15 @@ class CustomerService {
     });
     if (!customer) {
       throw new Error('Customer not found');
+    }
+
+    if (data.phone && data.phone !== customer.phone) {
+      const existingPhone = await prisma.customer.findUnique({
+        where: { phone: data.phone },
+      });
+      if (existingPhone && existingPhone.id !== parseInt(id)) {
+        throw new Error(`A customer with phone number '${data.phone}' already exists (${existingPhone.name}).`);
+      }
     }
 
     // Handle routerId & oltId: convert empty string to null
