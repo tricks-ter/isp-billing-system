@@ -236,8 +236,17 @@ class CustomerPortalService {
         advanceTotal,
         currentMonth,
         unpaidInvoices,
+        recentInvoices: customer.invoices.slice(0, 5).map(inv => ({
+          id: inv.id,
+          month: inv.month,
+          total: inv.total,
+          paidAmount: inv.payments.reduce((sum, p) => sum + p.amount, 0),
+          status: inv.status,
+          dueDate: inv.dueDate,
+          publicToken: inv.publicToken,
+        })),
       },
-      recentTickets: customer.tickets,
+      recentTickets: customer.tickets || [],
     };
   }
 

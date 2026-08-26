@@ -352,15 +352,15 @@ export default function CustomerDashboardPage() {
             </div>
 
             <div className="space-y-1">
-              <div className="text-3xl font-black text-white">{recentTickets.length} Tickets</div>
+              <div className="text-3xl font-black text-white">{(recentTickets || []).length} Tickets</div>
               <p className="text-xs text-slate-400 font-medium">24/7 NOC Engineering Desk</p>
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-800/80 space-y-2 text-xs">
-              {recentTickets.length === 0 ? (
+              {(recentTickets || []).length === 0 ? (
                 <p className="text-slate-500 italic py-2">No active complaints or tickets.</p>
               ) : (
-                recentTickets.slice(0, 2).map(ticket => (
+                (recentTickets || []).slice(0, 2).map(ticket => (
                   <div key={ticket.id} className="p-2.5 rounded-xl bg-slate-950/50 border border-slate-800/80 flex items-center justify-between">
                     <div>
                       <p className="font-semibold text-slate-200 truncate max-w-[150px]">{ticket.subject}</p>
@@ -416,7 +416,7 @@ export default function CustomerDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {billing.recentInvoices.map((inv) => {
+              {(billing?.recentInvoices || billing?.unpaidInvoices || []).map((inv) => {
                 const isPaid = inv.status === 'PAID';
                 return (
                   <tr key={inv.id} className="hover:bg-slate-800/30 transition-colors">
