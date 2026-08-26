@@ -8,14 +8,16 @@ const smsService = require('./smsService');
 
 class BkashService {
   constructor() {
-    const backendBase = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3001';
+    const backendBase = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || (process.env.NODE_ENV === 'production' ? 'https://isp-billing-backend-05ja.onrender.com' : 'http://localhost:3001');
+    const frontendBase = process.env.FRONTEND_URL || process.env.APP_FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://isp-billing-frontend-0f1m.onrender.com' : 'http://localhost:5173');
+
     this.baseUrl = process.env.BKASH_BASE_URL || 'https://tokenized.sandbox.bka.sh/v1.2.0-beta/tokenized';
     this.appKey = process.env.BKASH_APP_KEY || '4f6o0cjiki2rfm34kfdadl1eqq';
     this.appSecret = process.env.BKASH_APP_SECRET || '2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3fug4b';
     this.username = process.env.BKASH_USERNAME || 'sandboxTokenizedUser02';
     this.password = process.env.BKASH_PASSWORD || 'sandboxTokenizedUser02@12345';
     this.callbackUrl = process.env.BKASH_CALLBACK_URL || `${backendBase}/api/bkash/callback`;
-    this.frontendUrl = process.env.FRONTEND_URL || process.env.APP_FRONTEND_URL || 'http://localhost:5173';
+    this.frontendUrl = frontendBase;
     this.isMockMode = process.env.BKASH_MOCK_MODE === 'true';
 
     // In-memory token cache

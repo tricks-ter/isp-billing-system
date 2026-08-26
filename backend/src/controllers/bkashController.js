@@ -41,7 +41,7 @@ class BkashController {
    * GET/POST /api/bkash/callback
    */
   async handleCallback(req, res) {
-    const frontendUrl = process.env.APP_FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || process.env.APP_FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://isp-billing-frontend-0f1m.onrender.com' : 'http://localhost:5173');
     try {
       const paymentID = req.query.paymentID || req.body.paymentID;
       const status = req.query.status || req.body.status;
