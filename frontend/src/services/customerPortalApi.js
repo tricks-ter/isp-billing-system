@@ -1,10 +1,9 @@
 // frontend/src/services/customerPortalApi.js
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { getApiBaseUrl } from './api';
 
 const customerApi = axios.create({
-  baseURL: `${API_URL}/customer-portal`,
+  baseURL: `${getApiBaseUrl()}/customer-portal`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,10 +38,9 @@ export const customerPortalApi = {
   getPayments: () => customerApi.get('/payments'),
   getTickets: () => customerApi.get('/tickets'),
   createTicket: (data) => customerApi.post('/tickets', data),
-  getPackages: () => customerApi.get('/packages'),
-  payBkash: (payload) => {
-    const data = typeof payload === 'object' ? payload : { invoiceId: payload };
-    return customerApi.post('/pay/bkash', data);
-  },
+  getAvailablePackages: () => customerApi.get('/packages'),
+  initiatePayment: (data) => customerApi.post('/payments/initiate', data),
+  queryPayment: (paymentId) => customerApi.get(`/payments/query/${paymentId}`),
 };
 
+export default customerPortalApi;

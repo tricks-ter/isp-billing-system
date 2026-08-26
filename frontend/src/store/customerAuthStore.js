@@ -1,28 +1,56 @@
 // frontend/src/store/customerAuthStore.js
 import { create } from 'zustand';
 
+const getStoredCustomer = () => {
+  try {
+    const raw = localStorage.getItem('isp_customer_user');
+    return raw && raw !== 'undefined' && raw !== 'null' ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.warn('Failed to parse stored isp_customer_user:', e);
+    localStorage.removeItem('isp_customer_user');
+    return null;
+  }
+};
+
+const getStoredToken = () => {
+  try {
+    const token = localStorage.getItem('isp_customer_token');
+    return token && token !== 'undefined' && token !== 'null' ? token : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const initialCustomer = getStoredCustomer();
+const initialToken = getStoredToken();
+
 const useCustomerAuthStore = create((set) => ({
-  customer: JSON.parse(localStorage.getItem('isp_customer_user')) || null,
-  token: localStorage.getItem('isp_customer_token') || null,
-  isAuthenticated: !!localStorage.getItem('isp_customer_token'),
+  customer: initialCustomer,
+  token: initialToken,
+  isAuthenticated: !!initialToken,
 
   login: (customerData, token) => {
-    localStorage.setItem('isp_customer_token', token);
-    localStorage.setItem('isp_customer_user', JSON.stringify(customerData));
+    try {
+      localStorage.setItem('isp_customer_token', token);
+      localStorage.setItem('isp_customer_user', JSON.stringify(customerData));
+    } catch (_) {}
     set({ customer: customerData, token, isAuthenticated: true });
   },
 
   setCustomer: (customerData) => {
-    localStorage.setItem('isp_customer_user', JSON.stringify(customerData));
+    try {
+      localStorage.setItem('isp_customer_user', JSON.stringify(customerData));
+    } catch (_) {}
     set({ customer: customerData });
   },
 
   logout: () => {
-    localStorage.removeItem('isp_customer_token');
-    localStorage.removeItem('isp_customer_user');
+    try {
+      localStorage.removeItem('isp_customer_token');
+      localStorage.removeItem('isp_customer_user');
+    } catch (_) {}
     set({ customer: null, token: null, isAuthenticated: false });
   },
 }));
 
 export default useCustomerAuthStore;
-

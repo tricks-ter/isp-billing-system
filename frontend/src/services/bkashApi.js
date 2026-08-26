@@ -1,12 +1,10 @@
 // frontend/src/services/bkashApi.js
 import axios from 'axios';
-import api from './api';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import api, { getApiBaseUrl } from './api';
 
 // Create a public axios instance for unauthenticated public quick-pay
 const publicApi = axios.create({
-  baseURL: API_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,3 +24,4 @@ export const bkashApi = {
   queryPayment: (paymentId) => api.get(`/bkash/query/${paymentId}`),
 };
 
+export default bkashApi;
