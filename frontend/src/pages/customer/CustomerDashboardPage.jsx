@@ -28,6 +28,12 @@ export default function CustomerDashboardPage() {
       let payload = {};
       if (options.invoiceId) {
         payload = { invoiceId: options.invoiceId };
+      } else if (options.isAdvance) {
+        payload = {
+          isAdvance: true,
+          monthsCount: options.monthsCount || advanceMonths || 1,
+          customAmount: options.customAmount || (customAdvanceAmount ? parseFloat(customAdvanceAmount) : undefined),
+        };
       } else if (hasDue && paymentMode === 'due' && firstDueInvoice) {
         payload = { invoiceId: firstDueInvoice.id };
       } else {
@@ -206,7 +212,17 @@ export default function CustomerDashboardPage() {
           {/* Action Button: Pay with bKash */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
             <button
-              onClick={() => handlePayBkash(paymentMode === 'due' && firstDueInvoice ? { invoiceId: firstDueInvoice.id } : {})}
+              onClick={() => {
+                if (paymentMode === 'due' && hasDue && firstDueInvoice) {
+                  handlePayBkash({ invoiceId: firstDueInvoice.id });
+                } else {
+                  handlePayBkash({
+                    isAdvance: true,
+                    monthsCount: advanceMonths || 1,
+                    customAmount: customAdvanceAmount ? parseFloat(customAdvanceAmount) : undefined,
+                  });
+                }
+              }}
               disabled={isPaying}
               className="inline-flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-[#E2136E] to-pink-600 hover:from-pink-600 hover:to-[#E2136E] text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-xl shadow-pink-600/30 transition-all duration-200 disabled:opacity-70 cursor-pointer"
             >

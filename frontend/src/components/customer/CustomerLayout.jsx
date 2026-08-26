@@ -112,7 +112,7 @@ export default function CustomerLayout() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden px-4 pt-2 pb-4 border-t border-slate-800 bg-[#0F172A] space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+          <div className="xl:hidden px-4 pt-2 pb-4 border-t border-slate-800 bg-[#0F172A] space-y-2 animate-in slide-in-from-top-2 duration-200 shadow-xl">
             <div className="p-3 bg-slate-800/70 border border-slate-700/50 rounded-xl mb-3 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">
@@ -130,7 +130,7 @@ export default function CustomerLayout() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {customerNavItems.map((item) => (
                 <NavLink
                   key={item.to}
