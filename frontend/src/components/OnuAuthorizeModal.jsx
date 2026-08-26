@@ -47,7 +47,7 @@ export default function OnuAuthorizeModal({ oltId, initialData = {}, onClose, on
       if (onSuccess) onSuccess();
       onClose();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to authorize ONU'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to authorize ONU'),
   });
 
   const onSubmit = (data) => {

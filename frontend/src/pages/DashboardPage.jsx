@@ -13,9 +13,16 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const firstName = user?.fullName?.split(' ')[0] || 'Admin';
 
-  const { data: customersData } = useQuery({
-    queryKey: ['customers', { page: 1, limit: 1 }],
-    queryFn: () => customerApi.getAll({ page: 1, limit: 1 }).then(res => res.data.data),
+  const { data: customerStats } = useQuery({
+    queryKey: ['customerStats'],
+    queryFn: () => customerApi.getStats().then(res => res.data.data),
+    refetchInterval: 15000,
+  });
+
+  const { data: allCustomersData } = useQuery({
+    queryKey: ['allCustomersData'],
+    queryFn: () => customerApi.getAll({ page: 1, limit: 100 }).then(res => res.data.data),
+    refetchInterval: 15000,
   });
 
   const { data: opticalSummary } = useQuery({
@@ -36,9 +43,9 @@ export default function DashboardPage() {
     refetchInterval: 30000,
   });
 
-  const totalCustomers = customersData?.pagination?.total || 0;
-  const activeCustomers = customersData?.customers?.filter(c => c.status === 'ACTIVE').length || 0;
-  const suspendedCustomers = customersData?.customers?.filter(c => c.status === 'SUSPENDED').length || 0;
+  const totalCustomers = customerStats?.total ?? allCustomersData?.pagination?.total ?? (allCustomersData?.customers?.length ?? 0);
+  const activeCustomers = customerStats?.active ?? (allCustomersData?.customers?.filter(c => c.status === 'ACTIVE').length ?? 0);
+  const suspendedCustomers = customerStats?.suspended ?? (allCustomersData?.customers?.filter(c => c.status === 'SUSPENDED').length ?? 0);
   const dueAmount = summaryData?.totalDue || 0;
 
   const revenueData = [
@@ -53,9 +60,9 @@ export default function DashboardPage() {
   ];
 
   const statusData = [
-    { name: 'Active', value: activeCustomers || 85 },
-    { name: 'Suspended', value: suspendedCustomers || 10 },
-    { name: 'Expired', value: 5 },
+    { name: 'Active', value: activeCustomers },
+    { name: 'Suspended', value: suspendedCustomers },
+    { name: 'Expired', value: customerStats?.expired ?? 0 },
   ];
 
   const stats = [

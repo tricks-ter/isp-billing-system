@@ -21,12 +21,12 @@ export default function PackagesPage() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id) => packageApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries(['packages']);
-      toast.success('Package deleted successfully');
+      toast.success(res.data?.message || 'Package deleted successfully');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to delete package');
+      toast.error(error.response?.data?.message || error.message || 'Failed to delete package');
     },
   });
 

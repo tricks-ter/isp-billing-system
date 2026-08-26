@@ -14,6 +14,15 @@ class CustomerController {
     }
   }
 
+  async getStats(req, res) {
+    try {
+      const stats = await customerService.getCustomerStats();
+      return res.status(200).json({ success: true, data: stats });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   async getById(req, res) {
     try {
       const customer = await customerService.getCustomerById(req.params.id);
@@ -26,7 +35,7 @@ class CustomerController {
   async create(req, res) {
     try {
       const customer = await customerService.createCustomer(req.body, req.user?.id || 1);
-      return res.status(201).json({ success: true, data: customer });
+      return res.status(201).json({ success: true, data: customer, message: 'Customer created successfully' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -35,7 +44,7 @@ class CustomerController {
   async update(req, res) {
     try {
       const customer = await customerService.updateCustomer(req.params.id, req.body, req.user?.id || 1);
-      return res.status(200).json({ success: true, data: customer });
+      return res.status(200).json({ success: true, data: customer, message: 'Customer updated successfully' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -43,8 +52,8 @@ class CustomerController {
 
   async delete(req, res) {
     try {
-      await customerService.deleteCustomer(req.params.id, req.user?.id || 1);
-      return res.status(200).json({ success: true, message: 'Customer deleted successfully' });
+      const result = await customerService.deleteCustomer(req.params.id, req.user?.id || 1);
+      return res.status(200).json({ success: true, message: result.message || 'Customer deleted successfully' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -53,7 +62,7 @@ class CustomerController {
   async suspend(req, res) {
     try {
       const customer = await customerService.suspendCustomer(req.params.id, req.user?.id || 1);
-      return res.status(200).json({ success: true, data: customer });
+      return res.status(200).json({ success: true, data: customer, message: 'Customer suspended successfully' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -62,7 +71,7 @@ class CustomerController {
   async restore(req, res) {
     try {
       const customer = await customerService.restoreCustomer(req.params.id, req.user?.id || 1);
-      return res.status(200).json({ success: true, data: customer });
+      return res.status(200).json({ success: true, data: customer, message: 'Customer restored successfully' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }

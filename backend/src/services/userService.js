@@ -67,14 +67,67 @@ class UserService {
   }
 
   async deleteUser(id, deletedBy) {
-    if (id === deletedBy) throw new Error('Cannot delete your own account');
-    await prisma.user.delete({ where: { id: parseInt(id) } });
+    const userId = parseInt(id);
+    if (userId === parseInt(deletedBy)) {
+      throw new Error('Cannot delete your own account');
+    }
 
-    await prisma.auditLog.create({
-      data: { userId: deletedBy, action: 'DELETE_USER', details: JSON.stringify({ userId: id }) },
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const adminFallbackId = parseInt(deletedBy) || 1;
+
+    await prisma.$transaction(async (tx) => {
+      // Unlink received payments
+      await tx.payment.updateMany({
+        where: { receivedBy: userId },
+        data: { receivedBy: null },
+      });
+
+      // Reassign recorded incomes and expenses to the acting admin
+      await tx.income.updateMany({
+        where: { recordedBy: userId },
+        data: { recordedBy: adminFallbackId },
+      });
+      await tx.expense.updateMany({
+        where: { recordedBy: userId },
+        data: { recordedBy: adminFallbackId },
+      });
+
+      // Delete staff and notifications
+      await tx.staff.deleteMany({
+        where: { userId },
+      });
+      await tx.notification.deleteMany({
+        where: { userId },
+      });
+
+      // Delete user's own audit logs
+      await tx.auditLog.deleteMany({
+        where: { userId },
+      });
+
+      // Delete the user
+      await tx.user.delete({
+        where: { id: userId },
+      });
     });
 
-    return { success: true };
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: deletedBy || 1,
+          action: 'DELETE_USER',
+          details: JSON.stringify({ deletedUserId: userId, username: user.username }),
+        },
+      });
+    } catch (e) {}
+
+    return { success: true, message: `User "${user.username}" deleted successfully` };
   }
 
   async changePassword(userId, currentPassword, newPassword) {

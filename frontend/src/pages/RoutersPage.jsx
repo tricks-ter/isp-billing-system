@@ -39,16 +39,16 @@ export default function RoutersPage() {
       queryClient.setQueryData(['mikrotikMockMode'], { mockMode: newMode });
       toast.success(newMode ? 'Mock Mode enabled' : 'Mock Mode disabled - connecting to real routers');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to toggle mock mode'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to toggle router mock mode'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => routerApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries(['routers']);
-      toast.success('Router deleted');
+      toast.success(res.data?.message || 'Router deleted successfully');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to delete router'),
   });
 
   const testMutation = useMutation({
@@ -62,8 +62,7 @@ export default function RoutersPage() {
       }
     },
     onError: (error) => {
-      const message = error.response?.data?.message || 'Connection test failed';
-      toast.error(message);
+      toast.error(error.response?.data?.message || error.message || 'Connection test failed');
     },
     onSettled: () => setTestingId(null),
   });
@@ -74,11 +73,7 @@ export default function RoutersPage() {
   };
 
   const handleDelete = (id, name, customerCount) => {
-    if (customerCount > 0) {
-      toast.error(`Cannot delete: ${customerCount} customers assigned`);
-      return;
-    }
-    if (window.confirm(`Delete router "${name}"?`)) {
+    if (window.confirm(`Delete router "${name}"? Assigned customers (${customerCount}) will be unlinked.`)) {
       deleteMutation.mutate(id);
     }
   };

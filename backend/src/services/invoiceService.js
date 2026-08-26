@@ -2,17 +2,14 @@ const prisma = require('../config/db');
 
 class InvoiceService {
   async generateMonthlyInvoices(month, userId, routerId = null) {
-    // month format: "2026-08"
     if (!/^\d{4}-\d{2}$/.test(month)) {
-      throw new Error('Invalid month format. Use YYYY-MM');
+      throw new Error('Invalid month format. Use YYYY-MM (e.g. 2026-08)');
     }
 
     const [year, monthNum] = month.split('-').map(Number);
     const dueDate = new Date(year, monthNum - 1, 10); // Due on 10th of the month
-    const periodStart = new Date(year, monthNum - 1, 1);
-    const periodEnd = new Date(year, monthNum, 0); // Last day of month
 
-    // Find all ACTIVE customers (optionally filtered by router)
+    // Find all ACTIVE customers
     const where = { status: 'ACTIVE' };
     if (routerId) where.routerId = parseInt(routerId);
 
@@ -27,64 +24,59 @@ class InvoiceService {
 
     const results = { created: 0, skipped: 0, errors: [] };
 
-    // Use transaction for atomicity
-    await prisma.$transaction(async (tx) => {
-      for (const customer of customers) {
-        try {
-          // Check if invoice already exists for this customer/month
-          const existing = await tx.invoice.findUnique({
-            where: {
-              customerId_month: {
-                customerId: customer.id,
-                month: month,
-              },
-            },
-          });
-
-          if (existing) {
-            results.skipped++;
-            continue;
-          }
-
-          // Calculate invoice amount
-          const baseAmount = customer.package.price;
-          const discount = 0; // Can be extended later
-          const vat = 0; // Can be extended later
-          const total = baseAmount - discount + vat;
-
-          // Create invoice
-          await tx.invoice.create({
-            data: {
+    for (const customer of customers) {
+      try {
+        const existing = await prisma.invoice.findUnique({
+          where: {
+            customerId_month: {
               customerId: customer.id,
               month,
-              amount: baseAmount,
-              discount,
-              vat,
-              total,
-              dueDate,
-              status: 'UNPAID',
             },
-          });
+          },
+        });
 
-          results.created++;
-        } catch (error) {
-          results.errors.push({
-            customerId: customer.id,
-            name: customer.name,
-            error: error.message,
-          });
+        if (existing) {
+          results.skipped++;
+          continue;
         }
-      }
-    });
 
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'GENERATE_INVOICES',
-        details: JSON.stringify({ month, results }),
-      },
-    });
+        const baseAmount = customer.package?.price || 0;
+        const discount = 0;
+        const vat = 0;
+        const total = baseAmount - discount + vat;
+
+        await prisma.invoice.create({
+          data: {
+            customerId: customer.id,
+            month,
+            amount: baseAmount,
+            discount,
+            vat,
+            total,
+            dueDate,
+            status: 'UNPAID',
+          },
+        });
+
+        results.created++;
+      } catch (error) {
+        results.errors.push({
+          customerId: customer.id,
+          name: customer.name,
+          error: error.message,
+        });
+      }
+    }
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'GENERATE_INVOICES',
+          details: JSON.stringify({ month, results }),
+        },
+      });
+    } catch (e) {}
 
     return results;
   }
@@ -118,13 +110,12 @@ class InvoiceService {
       prisma.invoice.count({ where }),
     ]);
 
-    // Calculate paid amount for each invoice
     const invoicesWithPaid = invoices.map((inv) => {
       const paidAmount = inv.payments.reduce((sum, p) => sum + p.amount, 0);
       return {
         ...inv,
         paidAmount,
-        dueAmount: inv.total - paidAmount,
+        dueAmount: Math.max(0, inv.total - paidAmount),
       };
     });
 
@@ -159,7 +150,7 @@ class InvoiceService {
     return {
       ...invoice,
       paidAmount,
-      dueAmount: invoice.total - paidAmount,
+      dueAmount: Math.max(0, invoice.total - paidAmount),
     };
   }
 
@@ -174,7 +165,7 @@ class InvoiceService {
     const totalPaid = invoices.reduce((sum, inv) => {
       return sum + inv.payments.reduce((s, p) => s + p.amount, 0);
     }, 0);
-    const totalDue = totalAmount - totalPaid;
+    const totalDue = Math.max(0, totalAmount - totalPaid);
     const paidInvoices = invoices.filter((inv) => {
       const paid = inv.payments.reduce((s, p) => s + p.amount, 0);
       return paid >= inv.total;

@@ -55,7 +55,7 @@ export default function LiveStatusPage() {
       queryClient.invalidateQueries(['liveStatus']);
       setSelectedCustomers([]);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Bulk suspend failed'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Bulk suspend failed'),
   });
 
   const bulkRestoreMutation = useMutation({
@@ -66,7 +66,7 @@ export default function LiveStatusPage() {
       queryClient.invalidateQueries(['liveStatus']);
       setSelectedCustomers([]);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Bulk restore failed'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Bulk restore failed'),
   });
 
   const toggleSelect = (id) => {

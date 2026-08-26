@@ -19,6 +19,7 @@ export default function NotificationsPage() {
       queryClient.invalidateQueries(['notifications']);
       queryClient.invalidateQueries(['unreadNotifs']);
     },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to mark notification as read'),
   });
 
   const markAllAsReadMutation = useMutation({
@@ -28,6 +29,7 @@ export default function NotificationsPage() {
       queryClient.invalidateQueries(['notifications']);
       queryClient.invalidateQueries(['unreadNotifs']);
     },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to mark notifications as read'),
   });
 
   const getIcon = (type) => {

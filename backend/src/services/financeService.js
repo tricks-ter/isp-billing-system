@@ -2,38 +2,66 @@ const prisma = require('../config/db');
 
 class FinanceService {
   async addIncome(data, userId) {
+    if (!data.category || data.category.trim() === '') {
+      throw new Error('Income category is required');
+    }
+    const amount = parseFloat(data.amount);
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error('Income amount must be greater than 0');
+    }
+
     const income = await prisma.income.create({
       data: {
-        category: data.category,
-        amount: parseFloat(data.amount),
-        description: data.description,
+        category: data.category.trim(),
+        amount,
+        description: data.description ? data.description.trim() : null,
         date: data.date ? new Date(data.date) : new Date(),
-        recordedBy: userId,
+        recordedBy: userId || 1,
       },
     });
 
-    await prisma.auditLog.create({
-      data: { userId, action: 'ADD_INCOME', details: JSON.stringify({ incomeId: income.id, amount: income.amount, category: income.category }) },
-    });
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'ADD_INCOME',
+          details: JSON.stringify({ incomeId: income.id, amount: income.amount, category: income.category }),
+        },
+      });
+    } catch (e) {}
 
     return income;
   }
 
   async addExpense(data, userId) {
+    if (!data.category || data.category.trim() === '') {
+      throw new Error('Expense category is required');
+    }
+    const amount = parseFloat(data.amount);
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error('Expense amount must be greater than 0');
+    }
+
     const expense = await prisma.expense.create({
       data: {
-        category: data.category,
-        amount: parseFloat(data.amount),
-        description: data.description,
+        category: data.category.trim(),
+        amount,
+        description: data.description ? data.description.trim() : null,
         date: data.date ? new Date(data.date) : new Date(),
-        recordedBy: userId,
-        billUrl: data.billUrl,
+        recordedBy: userId || 1,
+        billUrl: data.billUrl || null,
       },
     });
 
-    await prisma.auditLog.create({
-      data: { userId, action: 'ADD_EXPENSE', details: JSON.stringify({ expenseId: expense.id, amount: expense.amount, category: expense.category }) },
-    });
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'ADD_EXPENSE',
+          details: JSON.stringify({ expenseId: expense.id, amount: expense.amount, category: expense.category }),
+        },
+      });
+    } catch (e) {}
 
     return expense;
   }
@@ -50,8 +78,20 @@ class FinanceService {
     if (filters.category) where.category = filters.category;
 
     const [incomes, expenses] = await Promise.all([
-      prisma.income.findMany({ where, skip, take: limit, include: { recorder: { select: { fullName: true } } }, orderBy: { date: 'desc' } }),
-      prisma.expense.findMany({ where, skip, take: limit, include: { recorder: { select: { fullName: true } } }, orderBy: { date: 'desc' } }),
+      prisma.income.findMany({
+        where,
+        skip,
+        take: limit,
+        include: { recorder: { select: { fullName: true } } },
+        orderBy: { date: 'desc' },
+      }),
+      prisma.expense.findMany({
+        where,
+        skip,
+        take: limit,
+        include: { recorder: { select: { fullName: true } } },
+        orderBy: { date: 'desc' },
+      }),
     ]);
 
     const allTransactions = [

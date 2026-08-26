@@ -67,20 +67,20 @@ export default function OltForm({ olt, onSuccess, onCancel }) {
 
   const createMutation = useMutation({
     mutationFn: (data) => oltApi.create(data),
-    onSuccess: () => {
-      toast.success('OLT device created successfully');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'OLT device created successfully');
       onSuccess();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to create OLT'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to create OLT device'),
   });
 
   const updateMutation = useMutation({
     mutationFn: (data) => oltApi.update(olt.id, data),
-    onSuccess: () => {
-      toast.success('OLT device updated successfully');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'OLT device updated successfully');
       onSuccess();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update OLT'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to update OLT device'),
   });
 
   const onSubmit = (data) => {

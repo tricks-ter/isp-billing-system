@@ -50,7 +50,7 @@ export default function BillingPage() {
       queryClient.invalidateQueries(['invoiceSummary']);
       setIsGenerateOpen(false);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to generate'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to generate invoices'),
   });
 
   // Send reminders mutation
@@ -60,7 +60,7 @@ export default function BillingPage() {
       const { sent, failed } = res.data.data;
       toast.success(`Reminders sent: ${sent} successful, ${failed} failed`);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to send reminders'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to send reminders'),
   });
 
   const getStatusBadge = (status, dueAmount = 0) => {
@@ -116,7 +116,7 @@ export default function BillingPage() {
         toast.success('Customer Quick-Pay link copied to clipboard!');
       }
     } catch (err) {
-      toast.error('Failed to generate quick pay link');
+      toast.error(err.response?.data?.message || err.message || 'Failed to generate quick pay link');
     }
   };
 
@@ -133,7 +133,7 @@ export default function BillingPage() {
       }
     } catch (err) {
       toast.dismiss(loadingToast);
-      toast.error(err.response?.data?.message || 'Failed to initiate bKash payment');
+      toast.error(err.response?.data?.message || err.message || 'Failed to initiate bKash payment');
     }
   };
 

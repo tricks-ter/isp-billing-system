@@ -43,6 +43,15 @@ class CustomerService {
     };
   }
 
+  async getCustomerStats() {
+    const [total, active, suspended] = await Promise.all([
+      prisma.customer.count(),
+      prisma.customer.count({ where: { status: 'ACTIVE' } }),
+      prisma.customer.count({ where: { status: 'SUSPENDED' } }),
+    ]);
+    return { total, active, suspended, expired: 0 };
+  }
+
   async getCustomerById(id) {
     const customer = await prisma.customer.findUnique({
       where: { id: parseInt(id) },

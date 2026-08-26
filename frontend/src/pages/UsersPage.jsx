@@ -19,8 +19,8 @@ export default function UsersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => userApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries(['users']); toast.success('User deleted'); },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+    onSuccess: (res) => { queryClient.invalidateQueries(['users']); toast.success(res.data?.message || 'User deleted successfully'); },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to delete user'),
   });
 
   const handleDelete = (id, username) => {
@@ -105,14 +105,14 @@ function UserForm({ user, onSuccess, onCancel }) {
 
   const createMutation = useMutation({
     mutationFn: (data) => userApi.create(data),
-    onSuccess: () => { toast.success('User created'); onSuccess(); },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+    onSuccess: (res) => { toast.success(res.data?.message || 'User created successfully'); onSuccess(); },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to create user'),
   });
 
   const updateMutation = useMutation({
     mutationFn: (data) => userApi.update(user.id, data),
-    onSuccess: () => { toast.success('User updated'); onSuccess(); },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+    onSuccess: (res) => { toast.success(res.data?.message || 'User updated successfully'); onSuccess(); },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to update user'),
   });
 
   const handleSubmit = (e) => {

@@ -79,20 +79,20 @@ export default function CustomerForm({ customer, onSuccess, onCancel }) {
 
   const createMutation = useMutation({
     mutationFn: (data) => customerApi.create(data),
-    onSuccess: () => {
-      toast.success('Customer created successfully! Router sync initiated in background.');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Customer created successfully!');
       onSuccess();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to create customer'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to create customer'),
   });
 
   const updateMutation = useMutation({
     mutationFn: (data) => customerApi.update(customer.id, data),
-    onSuccess: () => {
-      toast.success('Customer updated successfully! Router sync initiated in background.');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Customer updated successfully!');
       onSuccess();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update customer'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to update customer'),
   });
 
   const onSubmit = (data) => {

@@ -9,8 +9,8 @@ import toast from 'react-hot-toast';
 const packageSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   speed: z.string().min(2, 'Speed must be specified'),
-  price: z.number().min(0, 'Price must be positive'),
-  validity: z.number().min(1, 'Validity must be at least 1 day'),
+  price: z.coerce.number().min(0, 'Price must be positive'),
+  validity: z.coerce.number().min(1, 'Validity must be at least 1 day'),
 });
 
 export default function PackageForm({ package: pkg, onSuccess, onCancel }) {
@@ -25,7 +25,7 @@ export default function PackageForm({ package: pkg, onSuccess, onCancel }) {
     defaultValues: pkg || {
       name: '',
       speed: '',
-      price: 0,
+      price: 1000,
       validity: 30,
     },
   });
@@ -33,24 +33,24 @@ export default function PackageForm({ package: pkg, onSuccess, onCancel }) {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data) => packageApi.create(data),
-    onSuccess: () => {
-      toast.success('Package created successfully');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Package created successfully');
       onSuccess();
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to create package');
+      toast.error(error.response?.data?.message || error.message || 'Failed to create package');
     },
   });
 
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: (data) => packageApi.update(pkg.id, data),
-    onSuccess: () => {
-      toast.success('Package updated successfully');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Package updated successfully');
       onSuccess();
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to update package');
+      toast.error(error.response?.data?.message || error.message || 'Failed to update package');
     },
   });
 
@@ -99,7 +99,7 @@ export default function PackageForm({ package: pkg, onSuccess, onCancel }) {
             Price (৳) <span className="text-red-500">*</span>
           </label>
           <input
-            {...register('price', { valueAsNumber: true })}
+            {...register('price')}
             type="number"
             step="0.01"
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -114,7 +114,7 @@ export default function PackageForm({ package: pkg, onSuccess, onCancel }) {
             Validity (days) <span className="text-red-500">*</span>
           </label>
           <input
-            {...register('validity', { valueAsNumber: true })}
+            {...register('validity')}
             type="number"
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
             placeholder="30"

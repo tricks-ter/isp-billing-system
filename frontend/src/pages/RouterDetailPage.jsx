@@ -149,7 +149,7 @@ export default function RouterDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
       setIsPppoeFormOpen(false);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to create'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to create PPPoE secret'),
   });
 
   const updatePppoeMutation = useMutation({
@@ -160,7 +160,7 @@ export default function RouterDetailPage() {
       setIsPppoeFormOpen(false);
       setEditingPppoe(null);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to update PPPoE secret'),
   });
 
   const deletePppoeMutation = useMutation({
@@ -169,7 +169,7 @@ export default function RouterDetailPage() {
       toast.success('PPPoE secret deleted');
       queryClient.invalidateQueries({ queryKey: ['pppoeSecretsPaginated', id] });
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to delete PPPoE secret'),
   });
 
   // === OPTIMISTIC TOGGLE ===
@@ -197,7 +197,7 @@ export default function RouterDetailPage() {
       if (context?.previousData) {
         queryClient.setQueryData(pppoeQueryKey, context.previousData);
       }
-      toast.error(err.response?.data?.message || 'Failed to toggle secret');
+      toast.error(err.response?.data?.message || err.message || 'Failed to toggle PPPoE secret');
     },
     onSuccess: (_, { username, disable }) => {
       toast.success(`PPPoE secret ${disable ? 'disabled' : 'enabled'}`);
@@ -212,7 +212,7 @@ export default function RouterDetailPage() {
       toast.success(`Session ${username} disconnected`);
       queryClient.invalidateQueries({ queryKey: ['activeSessionsPaginated', id] });
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to disconnect'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to disconnect session'),
   });
 
   const handleDeletePppoe = (username) => {

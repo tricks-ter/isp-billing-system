@@ -50,6 +50,7 @@ model Customer {
   fiberSplitter String?
   fiberCore     String?
   invoices      Invoice[]
+  tickets       SupportTicket[]
   joinDate      DateTime  @default(now())
   expireDate    DateTime?
   createdAt     DateTime  @default(now())
@@ -293,4 +294,22 @@ model Onu {
   @@unique([oltId, portNumber, onuId])
   @@index([macAddress])
   @@index([serialNumber])
+}
+
+model SupportTicket {
+  id          Int       @id @default(autoincrement())
+  ticketNo    String    @unique
+  customerId  Int
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subject     String
+  category    String    @default("GENERAL") // NO_INTERNET, SLOW_SPEED, OPTICAL_LOS, BILLING, PACKAGE_CHANGE, ROUTER_CONFIG, OTHER
+  priority    String    @default("MEDIUM")  // LOW, MEDIUM, HIGH, URGENT
+  status      String    @default("OPEN")    // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  message     String
+  adminReply  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([status])
 }

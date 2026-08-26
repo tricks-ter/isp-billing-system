@@ -6,6 +6,8 @@ export const customerApi = {
     return api.get(`/customers${queryParams ? `?${queryParams}` : ''}`);
   },
 
+  getStats: () => api.get('/customers/stats'),
+
   getById: (id) => api.get(`/customers/${id}`),
 
   create: (data) => api.post('/customers', data),

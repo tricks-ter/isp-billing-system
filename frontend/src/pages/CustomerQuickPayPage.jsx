@@ -35,7 +35,7 @@ export default function CustomerQuickPayPage() {
       }
     } catch (err) {
       console.error('bKash Payment Error:', err);
-      toast.error(err.response?.data?.message || 'Failed to initiate bKash payment');
+      toast.error(err.response?.data?.message || err.message || 'Failed to initiate bKash payment');
       setIsProcessing(false);
     }
   };

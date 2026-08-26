@@ -17,7 +17,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      if (!window.location.pathname.includes('/login')) {
+      const path = window.location.pathname;
+      const isPublicPath = path.includes('/login') || path.startsWith('/pay/') || path.startsWith('/payment/');
+      if (!isPublicPath) {
         localStorage.removeItem('isp_token');
         localStorage.removeItem('isp_user');
         window.location.href = '/login';

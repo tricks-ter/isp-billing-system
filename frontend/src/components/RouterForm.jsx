@@ -31,20 +31,20 @@ export default function RouterForm({ router, onSuccess, onCancel }) {
 
   const createMutation = useMutation({
     mutationFn: (data) => routerApi.create(data),
-    onSuccess: () => {
-      toast.success('Router added successfully');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Router added successfully');
       onSuccess();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to add router'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to add router'),
   });
 
   const updateMutation = useMutation({
     mutationFn: (data) => routerApi.update(router.id, data),
-    onSuccess: () => {
-      toast.success('Router updated successfully');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Router updated successfully');
       onSuccess();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update router'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to update router'),
   });
 
   const onSubmit = (data) => {

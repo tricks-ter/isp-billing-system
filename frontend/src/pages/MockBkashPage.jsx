@@ -14,16 +14,17 @@ export default function MockBkashPage() {
   const [otp, setOtp] = useState('123456');
   const [pin, setPin] = useState('12121');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
   const handleCancel = () => {
-    window.location.href = `http://localhost:3001/api/bkash/callback?paymentID=${paymentID}&status=cancel`;
+    window.location.href = `${apiUrl}/bkash/callback?paymentID=${paymentID}&status=cancel`;
   };
 
   const handleConfirm = () => {
     setIsSubmitting(true);
     // Redirect to backend callback handler with success
     setTimeout(() => {
-      window.location.href = `http://localhost:3001/api/bkash/callback?paymentID=${paymentID}&status=success`;
+      window.location.href = `${apiUrl}/bkash/callback?paymentID=${paymentID}&status=success`;
     }, 800);
   };
 

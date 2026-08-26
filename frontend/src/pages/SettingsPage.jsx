@@ -57,8 +57,8 @@ function ProfileTab() {
   const [formData, setFormData] = useState({ fullName: user?.fullName || '', phone: '', address: '' });
   const updateMutation = useMutation({
     mutationFn: (data) => userApi.updateProfile(data),
-    onSuccess: () => toast.success('Profile updated'),
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to update'),
+    onSuccess: (res) => toast.success(res.data?.message || 'Profile updated successfully'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to update profile'),
   });
 
   return (
@@ -87,8 +87,8 @@ function PasswordTab() {
   const [formData, setFormData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const changeMutation = useMutation({
     mutationFn: (data) => userApi.changePassword(data),
-    onSuccess: () => { toast.success('Password changed successfully'); setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' }); },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to change password'),
+    onSuccess: (res) => { toast.success(res.data?.message || 'Password changed successfully'); setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' }); },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to change password'),
   });
 
   const handleSubmit = (e) => {
@@ -162,7 +162,7 @@ function SystemTab() {
       queryClient.setQueryData(['smsMockMode'], { mockMode: newMode });
       toast.success(newMode ? 'SMS Mock Mode enabled' : 'SMS Mock Mode disabled');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to toggle SMS mock mode'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to toggle SMS mock mode'),
   });
 
   const isSmsMock = smsMockData?.mockMode ?? true;

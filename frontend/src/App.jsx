@@ -2,6 +2,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+
+// Admin / Staff components
 import Login from './components/Login';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -21,10 +23,22 @@ import UsersPage from './pages/UsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
+
+// Public Payment Pages
 import CustomerQuickPayPage from './pages/CustomerQuickPayPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentFailedPage from './pages/PaymentFailedPage';
 import MockBkashPage from './pages/MockBkashPage';
+
+// Customer Self-Care Portal Components
+import CustomerProtectedRoute from './components/customer/CustomerProtectedRoute';
+import CustomerLayout from './components/customer/CustomerLayout';
+import CustomerDashboardPage from './pages/customer/CustomerDashboardPage';
+import CustomerInvoicesPage from './pages/customer/CustomerInvoicesPage';
+import CustomerPaymentsPage from './pages/customer/CustomerPaymentsPage';
+import CustomerTicketsPage from './pages/customer/CustomerTicketsPage';
+import CustomerPackagesPage from './pages/customer/CustomerPackagesPage';
+import CustomerProfilePage from './pages/customer/CustomerProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,14 +61,27 @@ function App() {
           }}
         />
         <Routes>
-          {/* Public Customer Payment & Auth Routes */}
+          {/* Unified Login & Public Customer Payment Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/portal/login" element={<Navigate to="/login?tab=customer" replace />} />
           <Route path="/pay/:token" element={<CustomerQuickPayPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/payment/failed" element={<PaymentFailedPage />} />
           <Route path="/payment/mock-bkash" element={<MockBkashPage />} />
 
-          {/* Protected Admin / Staff Management Routes */}
+          {/* Protected Customer Self-Care Portal Routes */}
+          <Route element={<CustomerProtectedRoute />}>
+            <Route element={<CustomerLayout />}>
+              <Route path="/portal/dashboard" element={<CustomerDashboardPage />} />
+              <Route path="/portal/invoices" element={<CustomerInvoicesPage />} />
+              <Route path="/portal/payments" element={<CustomerPaymentsPage />} />
+              <Route path="/portal/tickets" element={<CustomerTicketsPage />} />
+              <Route path="/portal/packages" element={<CustomerPackagesPage />} />
+              <Route path="/portal/profile" element={<CustomerProfilePage />} />
+            </Route>
+          </Route>
+
+          {/* Protected Admin & Staff Management Routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
@@ -75,7 +102,8 @@ function App() {
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

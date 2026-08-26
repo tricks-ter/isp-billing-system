@@ -8,8 +8,12 @@ class InvoiceController {
         return res.status(400).json({ success: false, message: 'Month is required (YYYY-MM)' });
       }
 
-      const results = await invoiceService.generateMonthlyInvoices(month, req.user.id, routerId);
-      return res.status(201).json({ success: true, data: results });
+      const results = await invoiceService.generateMonthlyInvoices(month, req.user?.id || 1, routerId);
+      return res.status(201).json({
+        success: true,
+        data: results,
+        message: `Generated ${results.created} invoices, skipped ${results.skipped} existing.`
+      });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }

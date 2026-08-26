@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { Wallet, CreditCard, Smartphone, Building2 } from 'lucide-react';
 
 const schema = z.object({
-  amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   method: z.enum(['CASH', 'BKASH', 'NAGAD', 'BANK'], { required_error: 'Please select a method' }),
   notes: z.string().optional(),
 });
@@ -33,11 +33,11 @@ export default function PaymentForm({ invoice, onSuccess, onCancel }) {
 
   const recordMutation = useMutation({
     mutationFn: (data) => paymentApi.record({ ...data, invoiceId: invoice.id }),
-    onSuccess: () => {
-      toast.success('Payment recorded successfully');
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Payment recorded successfully');
       onSuccess();
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to record payment'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to record payment'),
   });
 
   return (

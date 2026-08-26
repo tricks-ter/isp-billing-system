@@ -71,7 +71,7 @@ class RouterController {
       if (!customerIds || !Array.isArray(customerIds)) {
         return res.status(400).json({ success: false, message: 'customerIds array is required' });
       }
-      const results = await routerService.bulkSuspend(customerIds, req.user.id);
+      const results = await routerService.bulkSuspend(customerIds, req.user?.id || 1);
       return res.status(200).json({ success: true, data: results });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
@@ -84,7 +84,7 @@ class RouterController {
       if (!customerIds || !Array.isArray(customerIds)) {
         return res.status(400).json({ success: false, message: 'customerIds array is required' });
       }
-      const results = await routerService.bulkRestore(customerIds, req.user.id);
+      const results = await routerService.bulkRestore(customerIds, req.user?.id || 1);
       return res.status(200).json({ success: true, data: results });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });

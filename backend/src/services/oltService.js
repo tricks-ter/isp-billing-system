@@ -669,15 +669,29 @@ class OltService {
       },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: disable ? 'DISABLE_ONU_PORT' : 'ENABLE_ONU_PORT',
-        details: JSON.stringify({ oltId: onu.oltId, onuId: onu.id }),
-      },
-    });
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: disable ? 'DISABLE_ONU_PORT' : 'ENABLE_ONU_PORT',
+          details: JSON.stringify({ oltId: onu.oltId, onuId: onu.id }),
+        },
+      });
+    } catch (e) {}
 
     return result;
+  }
+
+  async toggleCustomerOnu(customerId, disable) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: parseInt(customerId) },
+      include: { onu: true, olt: true },
+    });
+    if (!customer || !customer.oltId || !customer.onu) {
+      return { success: false, message: 'No active OLT or ONU assigned to customer' };
+    }
+    const isDisable = disable === true || disable === 'disable';
+    return await this.toggleOnuPort(customer.oltId, customer.onu.id, isDisable, 1);
   }
 
   async executeRawCli(oltId, command, userId) {

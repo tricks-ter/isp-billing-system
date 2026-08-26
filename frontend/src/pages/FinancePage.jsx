@@ -26,14 +26,14 @@ export default function FinancePage() {
 
   const addIncomeMutation = useMutation({
     mutationFn: (data) => financeApi.addIncome(data),
-    onSuccess: () => { toast.success('Income recorded'); queryClient.invalidateQueries(['transactions']); queryClient.invalidateQueries(['financeSummary']); setIsIncomeOpen(false); },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+    onSuccess: (res) => { toast.success(res.data?.message || 'Income recorded successfully'); queryClient.invalidateQueries(['transactions']); queryClient.invalidateQueries(['financeSummary']); setIsIncomeOpen(false); },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to record income'),
   });
 
   const addExpenseMutation = useMutation({
     mutationFn: (data) => financeApi.addExpense(data),
-    onSuccess: () => { toast.success('Expense recorded'); queryClient.invalidateQueries(['transactions']); queryClient.invalidateQueries(['financeSummary']); setIsExpenseOpen(false); },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed'),
+    onSuccess: (res) => { toast.success(res.data?.message || 'Expense recorded successfully'); queryClient.invalidateQueries(['transactions']); queryClient.invalidateQueries(['financeSummary']); setIsExpenseOpen(false); },
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to record expense'),
   });
 
   return (

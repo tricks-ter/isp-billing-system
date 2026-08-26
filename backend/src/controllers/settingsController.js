@@ -1,4 +1,3 @@
-// FILE: ./backend/src/controllers/settingsController.js
 const settingsService = require('../services/settingsService');
 const mikrotikService = require('../services/mikrotikService');
 
@@ -19,7 +18,7 @@ class SettingsController {
       if (typeof enabled !== 'boolean') {
         return res.status(400).json({ success: false, message: 'enabled must be a boolean' });
       }
-      const result = await settingsService.setMikrotikMockMode(enabled, req.user.id);
+      const result = await settingsService.setMikrotikMockMode(enabled, req.user?.id || 1);
       mikrotikService.setMockMode(enabled);
       return res.status(200).json({ success: true, data: result });
     } catch (error) {
@@ -42,7 +41,7 @@ class SettingsController {
       if (typeof enabled !== 'boolean') {
         return res.status(400).json({ success: false, message: 'enabled must be a boolean' });
       }
-      const result = await settingsService.setSmsMockMode(enabled, req.user.id);
+      const result = await settingsService.setSmsMockMode(enabled, req.user?.id || 1);
       return res.status(200).json({ success: true, data: result });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });

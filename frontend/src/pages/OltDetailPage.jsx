@@ -89,7 +89,7 @@ export default function OltDetailPage() {
       queryClient.invalidateQueries(['registeredOnus', id]);
       queryClient.invalidateQueries(['ponPorts', id]);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Sync failed'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'OLT sync failed'),
   });
 
   const testMutation = useMutation({
@@ -102,7 +102,7 @@ export default function OltDetailPage() {
         toast.error(data?.message || 'Connection failed');
       }
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Connection test failed'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'OLT connection test failed'),
   });
 
   const rebootMutation = useMutation({
@@ -111,7 +111,7 @@ export default function OltDetailPage() {
       toast.success(res.data?.message || 'Reboot command sent to ONU');
       queryClient.invalidateQueries(['registeredOnus', id]);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Reboot failed'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to reboot ONU'),
   });
 
   const unauthorizeMutation = useMutation({
@@ -121,7 +121,7 @@ export default function OltDetailPage() {
       queryClient.invalidateQueries(['registeredOnus', id]);
       queryClient.invalidateQueries(['unregisteredOnus', id]);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to unbind ONU'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to unbind ONU'),
   });
 
   const opticalDiagMutation = useMutation({
@@ -131,7 +131,7 @@ export default function OltDetailPage() {
       toast.success(`Optical Signal: ${diag.rxPower} dBm (${diag.status})`);
       queryClient.invalidateQueries(['registeredOnus', id]);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to read optical power'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to read optical power'),
   });
 
   const handleRunCli = async () => {

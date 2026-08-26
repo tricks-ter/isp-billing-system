@@ -39,6 +39,10 @@ class BkashService {
     return publicToken;
   }
 
+  async getOrCreateInvoicePublicToken(invoiceId) {
+    return await this.ensureInvoicePublicToken(invoiceId);
+  }
+
   /**
    * Grant / Refresh Token with bKash PGW
    */

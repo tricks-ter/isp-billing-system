@@ -38,12 +38,12 @@ export default function OltsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => oltApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries(['olts']);
       queryClient.invalidateQueries(['opticalSummary']);
-      toast.success('OLT device deleted successfully');
+      toast.success(res.data?.message || 'OLT device deleted successfully');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete OLT'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to delete OLT device'),
   });
 
   const testMutation = useMutation({
@@ -56,7 +56,7 @@ export default function OltsPage() {
         toast.error(data?.message || 'Connection failed');
       }
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Test connection failed'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'OLT connection test failed'),
     onSettled: () => setTestingId(null),
   });
 
@@ -67,7 +67,7 @@ export default function OltsPage() {
       queryClient.invalidateQueries(['olts']);
       queryClient.invalidateQueries(['opticalSummary']);
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Sync failed'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'OLT sync failed'),
     onSettled: () => setSyncingId(null),
   });
 
@@ -85,11 +85,7 @@ export default function OltsPage() {
 
   const handleDelete = (id, name, customerCount, e) => {
     e.stopPropagation();
-    if (customerCount > 0) {
-      toast.error(`Cannot delete: ${customerCount} customers assigned to this OLT`);
-      return;
-    }
-    if (window.confirm(`Delete OLT "${name}"? This action cannot be undone.`)) {
+    if (window.confirm(`Delete OLT "${name}"? This will unlink ${customerCount} customers and remove child PON ports.`)) {
       deleteMutation.mutate(id);
     }
   };

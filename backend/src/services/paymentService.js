@@ -1,4 +1,3 @@
-// FILE: ./backend/src/services/paymentService.js
 const prisma = require('../config/db');
 const mikrotikService = require('./mikrotikService');
 const oltService = require('./oltService');
@@ -6,13 +5,19 @@ const oltService = require('./oltService');
 class PaymentService {
   async recordPayment(data, userId) {
     const { invoiceId, amount, method, notes } = data;
+    if (!invoiceId) throw new Error('Invoice ID is required');
+
+    const paymentAmount = parseFloat(amount);
+    if (isNaN(paymentAmount) || paymentAmount <= 0) {
+      throw new Error('Payment amount must be greater than 0');
+    }
 
     // 1. Fetch invoice and customer details BEFORE transaction
     const invoice = await prisma.invoice.findUnique({
       where: { id: parseInt(invoiceId) },
       include: {
         payments: true,
-        customer: { include: { router: true, olt: true } }
+        customer: { include: { router: true, olt: true, onu: true } },
       },
     });
 
@@ -21,29 +26,25 @@ class PaymentService {
     const currentPaid = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
     const remainingDue = invoice.total - currentPaid;
 
-    if (amount > remainingDue) {
-      throw new Error(`Payment amount (${amount}) exceeds due amount (${remainingDue})`);
-    }
-    if (amount <= 0) {
-      throw new Error('Payment amount must be greater than 0');
+    if (paymentAmount > remainingDue) {
+      throw new Error(`Payment amount (৳${paymentAmount}) exceeds due amount (৳${remainingDue})`);
     }
 
-    // Track if we need to restore the customer AFTER the transaction
     let customerRestored = false;
 
-    // 2. DATABASE TRANSACTION (Strictly DB operations only)
+    // 2. DATABASE TRANSACTION
     const result = await prisma.$transaction(async (tx) => {
       const payment = await tx.payment.create({
         data: {
           invoiceId: parseInt(invoiceId),
-          amount: parseFloat(amount),
-          method,
+          amount: paymentAmount,
+          method: method || 'CASH',
           receivedBy: userId || null,
           notes: notes || null,
         },
       });
 
-      const newPaidAmount = currentPaid + parseFloat(amount);
+      const newPaidAmount = currentPaid + paymentAmount;
       let newStatus = 'PARTIAL';
       if (newPaidAmount >= invoice.total) {
         newStatus = 'PAID';
@@ -54,7 +55,6 @@ class PaymentService {
         data: { status: newStatus },
       });
 
-      // Update DB status, but DO NOT call hardware APIs inside transaction
       if (newStatus === 'PAID' && invoice.customer.status === 'SUSPENDED') {
         await tx.customer.update({
           where: { id: invoice.customer.id },
@@ -66,44 +66,39 @@ class PaymentService {
       return payment;
     });
 
-    // 3. EXTERNAL HARDWARE RESTORE HOOKS (Executed ONLY after DB transaction successfully commits)
+    // 3. EXTERNAL HARDWARE RESTORE HOOKS (Non-blocking)
     if (customerRestored) {
       // Restore MikroTik PPPoE
       if (invoice.customer.routerId && invoice.customer.router) {
-        try {
-          await mikrotikService.enablePppoeSecret(
-            invoice.customer.router,
-            invoice.customer.pppoeUsername
-          );
-        } catch (error) {
-          console.error('Failed to enable PPPoE on auto-restore:', error);
-        }
+        mikrotikService.enablePppoeSecret(
+          invoice.customer.router,
+          invoice.customer.pppoeUsername
+        ).catch(error => console.error('Failed to enable PPPoE on auto-restore:', error.message));
       }
 
       // Restore BDCOM OLT ONU Port
       if (invoice.customer.oltId) {
-        try {
-          await oltService.toggleCustomerOnu(invoice.customer.id, 'enable');
-        } catch (error) {
-          console.error('Failed to enable BDCOM OLT ONU on auto-restore:', error);
-        }
+        oltService.toggleCustomerOnu(invoice.customer.id, false)
+          .catch(error => console.error('Failed to enable BDCOM OLT ONU on auto-restore:', error.message));
       }
     }
 
     // 4. Audit Log
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'RECORD_PAYMENT',
-        details: JSON.stringify({
-          paymentId: result.id,
-          invoiceId,
-          amount,
-          method,
-          customerId: invoice.customer.id,
-        }),
-      },
-    });
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'RECORD_PAYMENT',
+          details: JSON.stringify({
+            paymentId: result.id,
+            invoiceId,
+            amount: paymentAmount,
+            method: method || 'CASH',
+            customerId: invoice.customer.id,
+          }),
+        },
+      });
+    } catch (e) {}
 
     return result;
   }

@@ -3,8 +3,8 @@ const paymentService = require('../services/paymentService');
 class PaymentController {
   async record(req, res) {
     try {
-      const payment = await paymentService.recordPayment(req.body, req.user.id);
-      return res.status(201).json({ success: true, data: payment });
+      const payment = await paymentService.recordPayment(req.body, req.user?.id || 1);
+      return res.status(201).json({ success: true, data: payment, message: 'Payment recorded successfully' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -32,7 +32,7 @@ class PaymentController {
     try {
       const { date } = req.query;
       if (!date) {
-        return res.status(400).json({ success: false, message: 'Date is required' });
+        return res.status(400).json({ success: false, message: 'Date is required (YYYY-MM-DD)' });
       }
       const result = await paymentService.getDailyCollection(date);
       return res.status(200).json({ success: true, data: result });

@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
 
 // Import all route modules
 const authRoutes = require('./routes/authRoutes');
@@ -19,24 +18,15 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const oltRoutes = require('./routes/oltRoutes');
 const bkashRoutes = require('./routes/bkashRoutes');
+const customerPortalRoutes = require('./routes/customerPortalRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- Rate Limiting ---
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.' },
-});
-app.use(limiter);
-
 // --- Middleware ---
 app.use(helmet());
 
-// FIXED: Proper CORS configuration
+// CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://isp-billing-frontend-0f1m.onrender.com',
@@ -66,6 +56,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/olts', oltRoutes);
 app.use('/api/bkash', bkashRoutes);
+app.use('/api/customer-portal', customerPortalRoutes);
 
 // --- Health Check ---
 app.get('/api/health', (req, res) => {

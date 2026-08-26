@@ -30,29 +30,29 @@ export default function CustomersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => customerApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries(['customers']);
-      toast.success('Customer deleted');
+      toast.success(res.data?.message || 'Customer deleted successfully');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to delete'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to delete customer'),
   });
 
   const suspendMutation = useMutation({
     mutationFn: (id) => customerApi.suspend(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries(['customers']);
-      toast.success('Customer suspended');
+      toast.success(res.data?.message || 'Customer suspended successfully');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to suspend'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to suspend customer'),
   });
 
   const restoreMutation = useMutation({
     mutationFn: (id) => customerApi.restore(id),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries(['customers']);
-      toast.success('Customer restored');
+      toast.success(res.data?.message || 'Customer restored successfully');
     },
-    onError: (error) => toast.error(error.response?.data?.message || 'Failed to restore'),
+    onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to restore customer'),
   });
 
   const handleDelete = (id, name) => {
