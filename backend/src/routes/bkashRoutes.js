@@ -2,7 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const bkashController = require('../controllers/bkashController');
-const { authenticate, authorize } = require('../middlewares/auth');
+const authMiddleware = require('../middleware/authMiddleware');
+const roleMiddleware = require('../middleware/roleMiddleware');
 
 // Public Endpoints (Accessible by customer self-service payment flow)
 router.get('/public-invoice/:token', bkashController.getPublicInvoice);
@@ -13,15 +14,15 @@ router.post('/callback', bkashController.handleCallback);
 // Authenticated Endpoints (Accessible by ISP staff & admin)
 router.post(
   '/generate-link/:invoiceId',
-  authenticate,
-  authorize('ADMIN', 'MANAGER', 'BILLING', 'STAFF'),
+  authMiddleware,
+  roleMiddleware('ADMIN', 'MANAGER', 'BILLING', 'STAFF'),
   bkashController.generateQuickPayLink
 );
 
 router.get(
   '/query/:paymentId',
-  authenticate,
-  authorize('ADMIN', 'MANAGER', 'BILLING'),
+  authMiddleware,
+  roleMiddleware('ADMIN', 'MANAGER', 'BILLING'),
   bkashController.queryPayment
 );
 
