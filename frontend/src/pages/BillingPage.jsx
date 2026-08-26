@@ -5,7 +5,10 @@ import { invoiceApi } from '../services/invoiceApi';
 import { paymentApi } from '../services/paymentApi';
 import { notificationApi } from '../services/notificationApi';
 import { bkashApi } from '../services/bkashApi';
-import { FileText, Plus, CreditCard, Eye, Calendar, Download, Send, Link2, ExternalLink } from 'lucide-react';
+import {
+  FileText, Plus, CreditCard, Eye, Calendar, Download, Send, Link2,
+  ExternalLink, Edit3, Clock, ToggleLeft, ToggleRight, Check
+} from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -13,6 +16,7 @@ import GenerateInvoiceForm from '../components/GenerateInvoiceForm';
 import PaymentForm from '../components/PaymentForm';
 import InvoiceDetailsModal from '../components/InvoiceDetailsModal';
 import { exportCSV } from '../utils/export';
+import { formatMonthName, formatDisplayDate } from '../utils/dateFormatter';
 import toast from 'react-hot-toast';
 
 export default function BillingPage() {
@@ -22,10 +26,16 @@ export default function BillingPage() {
   });
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [dateFormatMode, setDateFormatMode] = useState('month'); // 'month' or 'exact'
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isDueDateModalOpen, setIsDueDateModalOpen] = useState(false);
+  const [isBatchDueDateOpen, setIsBatchDueDateOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [newDueDate, setNewDueDate] = useState('');
+  const [batchDueDate, setBatchDueDate] = useState('');
+
   const queryClient = useQueryClient();
 
   // Fetch invoices
@@ -53,6 +63,30 @@ export default function BillingPage() {
     onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to generate invoices'),
   });
 
+  // Update single invoice due date
+  const updateDueDateMutation = useMutation({
+    mutationFn: ({ id, dueDate }) => invoiceApi.updateDueDate(id, dueDate),
+    onSuccess: () => {
+      toast.success('Invoice due date updated successfully');
+      queryClient.invalidateQueries(['invoices']);
+      queryClient.invalidateQueries(['invoiceSummary']);
+      setIsDueDateModalOpen(false);
+    },
+    onError: (err) => toast.error(err.response?.data?.message || err.message || 'Failed to update due date'),
+  });
+
+  // Batch update due dates
+  const batchUpdateDueDateMutation = useMutation({
+    mutationFn: ({ month, dueDate }) => invoiceApi.batchUpdateDueDate(month, dueDate),
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Updated due dates for all unpaid invoices');
+      queryClient.invalidateQueries(['invoices']);
+      queryClient.invalidateQueries(['invoiceSummary']);
+      setIsBatchDueDateOpen(false);
+    },
+    onError: (err) => toast.error(err.response?.data?.message || err.message || 'Batch due date update failed'),
+  });
+
   // Send reminders mutation
   const sendRemindersMutation = useMutation({
     mutationFn: () => notificationApi.sendReminders(),
@@ -63,7 +97,7 @@ export default function BillingPage() {
     onError: (error) => toast.error(error.response?.data?.message || error.message || 'Failed to send reminders'),
   });
 
-  const getStatusBadge = (status, dueAmount = 0) => {
+  const getStatusBadge = (status) => {
     if (status === 'PAID') return <Badge variant="success">PAID</Badge>;
     if (status === 'PARTIAL') return <Badge variant="warning">PARTIAL</Badge>;
     return <Badge variant="danger">UNPAID</Badge>;
@@ -77,6 +111,41 @@ export default function BillingPage() {
   const handleViewDetails = (invoice) => {
     setSelectedInvoice(invoice);
     setIsDetailsOpen(true);
+  };
+
+  const handleOpenDueDateModal = (invoice) => {
+    setSelectedInvoice(invoice);
+    const d = invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '';
+    setNewDueDate(d);
+    setIsDueDateModalOpen(true);
+  };
+
+  const handleCopyQuickPayLink = async (invoiceId) => {
+    try {
+      const res = await bkashApi.generateQuickPayLink(invoiceId);
+      if (res.data?.data?.quickPayUrl) {
+        navigator.clipboard.writeText(res.data.data.quickPayUrl);
+        toast.success('Public quick-pay link copied to clipboard!');
+      }
+    } catch (err) {
+      toast.error('Failed to generate quick-pay link');
+    }
+  };
+
+  const handleBkashOnlinePay = async (invoice) => {
+    try {
+      const res = await bkashApi.createPayment({
+        invoiceId: invoice.id,
+        customAmount: invoice.dueAmount || invoice.total,
+      });
+      if (res.data?.data?.bkashURL) {
+        window.open(res.data.data.bkashURL, '_blank');
+      } else {
+        toast.error('Failed to obtain bKash checkout link');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to initiate bKash payment');
+    }
   };
 
   const handleExportCSV = () => {
@@ -99,99 +168,120 @@ export default function BillingPage() {
       month: inv.month,
       customerName: inv.customer?.name || 'N/A',
       total: inv.total,
-      paidAmount: inv.paidAmount || 0,
-      dueAmount: inv.dueAmount || inv.total - (inv.paidAmount || 0),
+      paidAmount: inv.paidAmount,
+      dueAmount: inv.dueAmount,
       status: inv.status,
-      dueDate: new Date(inv.dueDate).toLocaleDateString('en-GB'),
+      dueDate: inv.dueDate,
     }));
     exportCSV(dataToExport, columns, `invoices_${month}`);
   };
 
-  const handleCopyQuickPayLink = async (invoiceId) => {
-    try {
-      const res = await bkashApi.generateQuickPayLink(invoiceId);
-      const url = res.data?.data?.quickPayUrl;
-      if (url) {
-        await navigator.clipboard.writeText(url);
-        toast.success('Customer Quick-Pay link copied to clipboard!');
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Failed to generate quick pay link');
-    }
-  };
-
-  const handleBkashOnlinePay = async (invoice) => {
-    const loadingToast = toast.loading('Initiating bKash payment...');
-    try {
-      const res = await bkashApi.createPayment({
-        invoiceId: invoice.id,
-        payerReference: invoice.customer?.phone,
-      });
-      toast.dismiss(loadingToast);
-      if (res.data?.data?.bkashURL) {
-        window.location.href = res.data.data.bkashURL;
-      }
-    } catch (err) {
-      toast.dismiss(loadingToast);
-      toast.error(err.response?.data?.message || err.message || 'Failed to initiate bKash payment');
-    }
-  };
-
   return (
     <div className="space-y-4 lg:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
+            Billing &amp; Invoices
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Manage subscriber invoices, due dates, grace periods, and collections
+          </p>
+        </div>
+
+        {/* Date Format Toggle */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setDateFormatMode(dateFormatMode === 'month' ? 'exact' : 'month')}
+            className="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center space-x-2 cursor-pointer shadow-sm"
+          >
+            {dateFormatMode === 'month' ? (
+              <>
+                <ToggleLeft className="w-4 h-4 text-primary" />
+                <span>Month View (e.g. {formatMonthName(month)})</span>
+              </>
+            ) : (
+              <>
+                <ToggleRight className="w-4 h-4 text-emerald-500" />
+                <span>Exact Date (DD/MM/YYYY)</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-xs text-slate-500 mb-1">Total Invoices</p>
-            <p className="text-xl lg:text-2xl font-bold text-slate-900">{summary.totalInvoices}</p>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs text-slate-500 mb-1">Billing Period</p>
+            <p className="text-lg lg:text-xl font-black text-slate-900 dark:text-slate-100">
+              {formatMonthName(summary.month)}
+            </p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-xs text-slate-500 mb-1">Total Amount</p>
-            <p className="text-xl lg:text-2xl font-bold text-slate-900">৳{summary.totalAmount.toLocaleString()}</p>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs text-slate-500 mb-1">Total Invoiced</p>
+            <p className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-slate-100">
+              ৳{summary.totalAmount.toLocaleString()}
+            </p>
           </div>
-          <div className="bg-white rounded-xl border border-green-200 bg-green-50 p-4">
-            <p className="text-xs text-green-600 mb-1">Collected</p>
-            <p className="text-xl lg:text-2xl font-bold text-green-700">৳{summary.totalPaid.toLocaleString()}</p>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/30 p-4 shadow-sm">
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Collected</p>
+            <p className="text-xl lg:text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+              ৳{summary.totalPaid.toLocaleString()}
+            </p>
           </div>
-          <div className="bg-white rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-xs text-amber-600 mb-1">Total Due</p>
-            <p className="text-xl lg:text-2xl font-bold text-amber-700">৳{summary.totalDue.toLocaleString()}</p>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50/50 dark:bg-rose-950/30 p-4 shadow-sm">
+            <p className="text-xs text-rose-600 dark:text-rose-400 mb-1">Outstanding Due</p>
+            <p className="text-xl lg:text-2xl font-bold text-rose-700 dark:text-rose-400">
+              ৳{summary.totalDue.toLocaleString()}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Controls */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3 lg:p-4">
+      {/* Controls & Batch Action Bar */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 lg:p-4 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <label className="text-xs text-slate-500 mb-1 block">Month</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block font-bold">Month</label>
             <input
               type="month"
               value={month}
               onChange={(e) => { setMonth(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <div className="flex-1">
-            <label className="text-xs text-slate-500 mb-1 block">Status</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block font-bold">Status Filter</label>
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
-              <option value="">All</option>
+              <option value="">All Statuses</option>
               <option value="UNPAID">Unpaid</option>
               <option value="PARTIAL">Partial</option>
               <option value="PAID">Paid</option>
             </select>
           </div>
-          <div className="flex items-end space-x-2 flex-wrap gap-2">
-            <Button onClick={() => setIsGenerateOpen(true)} className="whitespace-nowrap">
+          <div className="flex items-end space-x-2 flex-wrap gap-2 pt-2 sm:pt-0">
+            <Button onClick={() => setIsGenerateOpen(true)} className="whitespace-nowrap cursor-pointer">
               <Plus className="w-4 h-4" />
-              <span>Generate</span>
+              <span>Generate Invoices</span>
             </Button>
-            <Button variant="outline" onClick={handleExportCSV} className="whitespace-nowrap">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBatchDueDate('');
+                setIsBatchDueDateOpen(true);
+              }}
+              className="whitespace-nowrap cursor-pointer"
+            >
+              <Clock className="w-4 h-4 text-amber-500" />
+              <span>Extend Month Due Dates</span>
+            </Button>
+            <Button variant="outline" onClick={handleExportCSV} className="whitespace-nowrap cursor-pointer">
               <Download className="w-4 h-4" />
               <span>Export CSV</span>
             </Button>
@@ -199,194 +289,225 @@ export default function BillingPage() {
               variant="outline"
               onClick={() => sendRemindersMutation.mutate()}
               disabled={sendRemindersMutation.isPending}
-              className="whitespace-nowrap"
+              className="whitespace-nowrap cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>Send Reminders</span>
+              <span>Send SMS Alerts</span>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Invoices List (unchanged) */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Paid</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Due Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {isLoading ? (
-              <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
-            ) : data?.invoices?.length === 0 ? (
-              <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">No invoices found</td></tr>
-            ) : (
-              data?.invoices?.map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-slate-900">{inv.customer.name}</div>
-                    <div className="text-xs text-slate-500">{inv.customer.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-slate-900">৳{inv.total}</td>
-                  <td className="px-6 py-4 text-sm text-green-600">৳{inv.paidAmount}</td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    {new Date(inv.dueDate).toLocaleDateString('en-GB')}
-                  </td>
-                  <td className="px-6 py-4">{getStatusBadge(inv.status, inv.dueAmount)}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end space-x-1">
-                      {/* Copy Customer Quick-Pay Link */}
-                      <button
-                        onClick={() => handleCopyQuickPayLink(inv.id)}
-                        className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg"
-                        title="Copy Customer Quick-Pay Link"
-                      >
-                        <Link2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleViewDetails(inv)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {inv.status !== 'PAID' && (
-                        <>
-                          {/* Online bKash Checkout */}
-                          <button
-                            onClick={() => handleBkashOnlinePay(inv)}
-                            className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg font-bold text-xs flex items-center"
-                            title="Pay with bKash"
-                          >
-                            <span className="text-[10px] px-1 py-0.5 bg-pink-100 text-pink-700 rounded font-black mr-0.5">bKash</span>
-                          </button>
-                          {/* Manual Cash/POS Collect */}
-                          <button
-                            onClick={() => handlePay(inv)}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
-                            title="Collect Manual Cash Payment"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Invoices List Table */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Billing Period</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Paid</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Due Date &amp; Grace</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+              {isLoading ? (
+                <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">Loading subscriber invoices...</td></tr>
+              ) : data?.invoices?.length === 0 ? (
+                <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">No invoices found for this period.</td></tr>
+              ) : (
+                data?.invoices?.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{inv.customer.name}</div>
+                      <div className="text-xs text-slate-500 font-mono">{inv.customer.phone} • PPPoE: {inv.customer.pppoeUsername}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                      {dateFormatMode === 'month' ? formatMonthName(inv.month) : inv.month}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">৳{inv.total}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-emerald-600 dark:text-emerald-400">৳{inv.paidAmount}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                          {formatDisplayDate(inv.dueDate, dateFormatMode, true)}
+                        </span>
+                        <button
+                          onClick={() => handleOpenDueDateModal(inv)}
+                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-blue-500 transition cursor-pointer"
+                          title="Change Due Date / Extend Grace Period"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">{getStatusBadge(inv.status)}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end space-x-1.5">
+                        {/* Copy Customer Quick-Pay Link */}
+                        <button
+                          onClick={() => handleCopyQuickPayLink(inv.id)}
+                          className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
+                          title="Copy Customer Quick-Pay Link"
+                        >
+                          <Link2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleViewDetails(inv)}
+                          className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg cursor-pointer"
+                          title="View Statement"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {inv.status !== 'PAID' && (
+                          <>
+                            {/* Online bKash Checkout */}
+                            <button
+                              onClick={() => handleBkashOnlinePay(inv)}
+                              className="px-2 py-1 bg-[#E2136E]/10 hover:bg-[#E2136E]/20 text-[#E2136E] font-black text-xs rounded-lg flex items-center space-x-1 cursor-pointer"
+                              title="Pay via bKash Online"
+                            >
+                              <span>৳ bKash</span>
+                            </button>
+                            {/* Manual Cash/POS Collect */}
+                            <button
+                              onClick={() => handlePay(inv)}
+                              className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg cursor-pointer"
+                              title="Record Cash Payment"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Mobile Cards (unchanged) */}
-      <div className="lg:hidden divide-y divide-slate-200">
-        {isLoading ? (
-          <div className="p-8 text-center text-slate-500">Loading...</div>
-        ) : data?.invoices?.length === 0 ? (
-          <div className="p-8 text-center">
-            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-            <p className="text-slate-500">No invoices found</p>
-          </div>
-        ) : (
-          data?.invoices?.map((inv) => (
-            <div key={inv.id} className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-900 truncate">{inv.customer.name}</h3>
-                  <p className="text-xs text-slate-500">{inv.customer.phone}</p>
-                </div>
-                {getStatusBadge(inv.status, inv.dueAmount)}
-              </div>
+      {/* Modal: Generate Invoices */}
+      <Modal isOpen={isGenerateOpen} onClose={() => setIsGenerateOpen(false)} title="Generate Monthly Invoices">
+        <GenerateInvoiceForm
+          onSubmit={(formData) => generateMutation.mutate(formData)}
+          isLoading={generateMutation.isPending}
+          defaultMonth={month}
+        />
+      </Modal>
 
-              <div className="grid grid-cols-3 gap-2 text-sm mb-3">
-                <div>
-                  <p className="text-xs text-slate-500">Amount</p>
-                  <p className="font-semibold text-slate-900">৳{inv.total}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Paid</p>
-                  <p className="font-semibold text-green-600">৳{inv.paidAmount}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Due</p>
-                  <p className="font-semibold text-red-600">৳{inv.dueAmount}</p>
-                </div>
-              </div>
+      {/* Modal: Record Cash Payment */}
+      <Modal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} title="Record Manual Payment">
+        <PaymentForm
+          invoice={selectedInvoice}
+          onSuccess={() => {
+            queryClient.invalidateQueries(['invoices']);
+            queryClient.invalidateQueries(['invoiceSummary']);
+            setIsPaymentOpen(false);
+          }}
+        />
+      </Modal>
 
-              <div className="flex items-center space-x-2 pt-3 border-t border-slate-100">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleViewDetails(inv)}
-                  className="flex-1"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>View</span>
-                </Button>
-                {inv.status !== 'PAID' && (
-                  <Button
-                    variant="success"
-                    size="sm"
-                    onClick={() => handlePay(inv)}
-                    className="flex-1"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    <span>Pay</span>
-                  </Button>
-                )}
-              </div>
+      {/* Modal: View Details */}
+      <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Invoice Statement Details">
+        <InvoiceDetailsModal invoice={selectedInvoice} />
+      </Modal>
+
+      {/* Modal: Single Due Date Edit */}
+      {isDueDateModalOpen && selectedInvoice && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Update Due Date / Grace Period
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Customer: <strong className="text-slate-800 dark:text-slate-200">{selectedInvoice.customer?.name}</strong> • Month: {formatMonthName(selectedInvoice.month)}
+              </p>
             </div>
-          ))
-        )}
-      </div>
 
-      {/* Pagination */}
-      {data?.pagination?.totalPages > 1 && (
-        <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
-          <div className="text-xs sm:text-sm text-slate-500">
-            Page {data.pagination.page} of {data.pagination.totalPages}
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Prev</Button>
-            <Button variant="outline" size="sm" disabled={page === data.pagination.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block">
+                Select New Due Date:
+              </label>
+              <input
+                type="date"
+                value={newDueDate}
+                onChange={(e) => setNewDueDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsDueDateModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => updateDueDateMutation.mutate({ id: selectedInvoice.id, dueDate: newDueDate })}
+                disabled={!newDueDate || updateDueDateMutation.isPending}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl disabled:opacity-50 cursor-pointer"
+              >
+                {updateDueDateMutation.isPending ? 'Updating...' : 'Save Due Date'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modals */}
-      <Modal isOpen={isGenerateOpen} onClose={() => setIsGenerateOpen(false)} title="Generate Invoices">
-        <GenerateInvoiceForm
-          onSubmit={(data) => generateMutation.mutate(data)}
-          isLoading={generateMutation.isPending}
-          onCancel={() => setIsGenerateOpen(false)}
-        />
-      </Modal>
+      {/* Modal: Batch Extend Due Dates */}
+      {isBatchDueDateOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Batch Extend Due Dates
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Extend the grace period and due date for all unpaid invoices in <strong className="text-primary">{formatMonthName(month)}</strong>.
+              </p>
+            </div>
 
-      {selectedInvoice && (
-        <>
-          <Modal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} title="Collect Payment">
-            <PaymentForm
-              invoice={selectedInvoice}
-              onSuccess={() => {
-                setIsPaymentOpen(false);
-                queryClient.invalidateQueries(['invoices']);
-                queryClient.invalidateQueries(['invoiceSummary']);
-              }}
-              onCancel={() => setIsPaymentOpen(false)}
-            />
-          </Modal>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block">
+                New Due Date for All Unpaid Invoices:
+              </label>
+              <input
+                type="date"
+                value={batchDueDate}
+                onChange={(e) => setBatchDueDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
 
-          <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Invoice Details" size="lg">
-            <InvoiceDetailsModal invoice={selectedInvoice} />
-          </Modal>
-        </>
+            <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsBatchDueDateOpen(false)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => batchUpdateDueDateMutation.mutate({ month, dueDate: batchDueDate })}
+                disabled={!batchDueDate || batchUpdateDueDateMutation.isPending}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl disabled:opacity-50 cursor-pointer"
+              >
+                {batchUpdateDueDateMutation.isPending ? 'Extending...' : 'Extend All Dues'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

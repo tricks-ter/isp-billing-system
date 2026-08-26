@@ -11,4 +11,8 @@ export const invoiceApi = {
   generate: (data) => api.post('/invoices/generate', data),
 
   getMonthlySummary: (month) => api.get(`/invoices/summary?month=${month}`),
+
+  updateDueDate: (id, dueDate) => api.put(`/invoices/${id}/due-date`, { dueDate }),
+
+  batchUpdateDueDate: (month, dueDate) => api.put('/invoices/batch/due-date', { month, dueDate }),
 };

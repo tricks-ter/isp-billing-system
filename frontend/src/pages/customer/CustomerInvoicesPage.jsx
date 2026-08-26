@@ -2,9 +2,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { customerPortalApi } from '../../services/customerPortalApi';
+import BkashSandboxGuide from '../../components/BkashSandboxGuide';
+import { formatMonthName, formatDisplayDate } from '../../utils/dateFormatter';
 import {
   CreditCard, CheckCircle2, AlertCircle, Smartphone, Printer,
-  FileText, Download, Loader2, ArrowRight, ShieldCheck, Plus, Calendar, X
+  FileText, Download, Loader2, ArrowRight, ShieldCheck, Plus, Calendar, X,
+  ToggleLeft, ToggleRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -15,6 +18,7 @@ export default function CustomerInvoicesPage() {
   const [advanceMonths, setAdvanceMonths] = useState(1);
   const [customAdvanceAmount, setCustomAdvanceAmount] = useState('');
   const [isPayingAdvance, setIsPayingAdvance] = useState(false);
+  const [dateFormatMode, setDateFormatMode] = useState('month'); // 'month' or 'exact'
 
   const { data: invoices, isLoading, refetch } = useQuery({
     queryKey: ['customerInvoices'],
@@ -71,7 +75,6 @@ export default function CustomerInvoicesPage() {
   const totalBilled = invoices?.reduce((sum, i) => sum + i.total, 0) || 0;
   const totalPaid = invoices?.reduce((sum, i) => sum + i.paidAmount, 0) || 0;
   const currentMonthDue = currentOrPastInvoices.reduce((sum, i) => sum + i.dueAmount, 0);
-  const advancePaid = futureAdvanceInvoices.reduce((sum, i) => sum + i.paidAmount, 0);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -82,127 +85,141 @@ export default function CustomerInvoicesPage() {
             My Invoices &amp; Bills
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Review your monthly billing statements, pay dues, or recharge in advance with bKash
+            Review your monthly billing statements, pay dues, or recharge with bKash
           </p>
         </div>
 
-        <button
-          onClick={() => setAdvanceModalOpen(true)}
-          className="inline-flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-blue-600/25 transition-all cursor-pointer w-fit"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Pay Advance Bill</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* Toggle Button: Month View vs Exact Date */}
+          <button
+            onClick={() => setDateFormatMode(dateFormatMode === 'month' ? 'exact' : 'month')}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 flex items-center space-x-2 transition cursor-pointer"
+            title="Switch date format display"
+          >
+            {dateFormatMode === 'month' ? (
+              <>
+                <ToggleLeft className="w-4 h-4 text-blue-400" />
+                <span>Month View (e.g. August 2026)</span>
+              </>
+            ) : (
+              <>
+                <ToggleRight className="w-4 h-4 text-emerald-400" />
+                <span>Exact Date (DD/MM/YYYY)</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Embedded Sandbox Test Instructions */}
+      <BkashSandboxGuide />
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Invoiced</span>
-          <span className="text-2xl font-black text-white">৳{totalBilled.toLocaleString()}</span>
+          <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Total Invoices</span>
+          <div className="text-2xl sm:text-3xl font-black text-white mt-1">
+            {invoices?.length || 0}
+          </div>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Paid</span>
-          <span className="text-2xl font-black text-emerald-400">৳{totalPaid.toLocaleString()}</span>
+          <span className="text-xs text-emerald-400 uppercase font-bold tracking-wider">Total Amount Paid</span>
+          <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">
+            ৳{totalPaid.toLocaleString()}
+          </div>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Current Month Due</span>
-          <span className={`text-2xl font-black ${currentMonthDue > 0 ? 'text-pink-400' : 'text-emerald-400'}`}>
-            ৳{currentMonthDue.toLocaleString()} {currentMonthDue === 0 && <span className="text-xs font-bold text-emerald-500">(All Clear)</span>}
-          </span>
+          <span className="text-xs text-pink-400 uppercase font-bold tracking-wider">Current Month Due</span>
+          <div className="text-2xl sm:text-3xl font-black text-pink-400 mt-1">
+            ৳{currentMonthDue.toLocaleString()}
+          </div>
         </div>
       </div>
 
-      {/* Invoices List */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4">
-        <h3 className="text-base font-bold text-white mb-2">Monthly Invoices Statement</h3>
+      {/* Invoices Table */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 className="text-lg font-bold text-white">Monthly Billing Statements</h3>
+          <span className="text-xs text-slate-400">{invoices?.length || 0} Records</span>
+        </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-slate-400 text-sm">
+          <div className="py-12 text-center text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
-            <span>Loading invoices statement...</span>
+            <span>Loading billing statements...</span>
           </div>
         ) : !invoices || invoices.length === 0 ? (
-          <div className="py-12 text-center text-slate-500 italic text-sm">
-            No invoices generated yet.
-          </div>
+          <div className="py-12 text-center text-slate-500 italic">No invoices found for your account.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 uppercase font-mono">
-                  <th className="pb-3 pr-4">Invoice #</th>
                   <th className="pb-3 pr-4">Billing Month</th>
-                  <th className="pb-3 pr-4">Amount</th>
+                  <th className="pb-3 pr-4">Total Bill</th>
                   <th className="pb-3 pr-4">Paid</th>
-                  <th className="pb-3 pr-4">Due</th>
                   <th className="pb-3 pr-4">Due Date</th>
                   <th className="pb-3 pr-4">Status</th>
-                  <th className="pb-3 text-right">bKash Payment</th>
+                  <th className="pb-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {invoices.map((inv) => {
                   const isPaid = inv.status === 'PAID';
-                  const isPaying = isPayingId === inv.id;
-                  const isAdvance = inv.month > currentMonth;
+                  const isDue = !isPaid;
 
                   return (
                     <tr key={inv.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-4 pr-4 font-mono font-bold text-slate-300">INV-#{inv.id}</td>
-                      <td className="py-4 pr-4 font-bold text-white text-sm">
-                        <div className="flex items-center space-x-2">
-                          <span>{inv.month}</span>
-                          {isAdvance && (
-                            <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded">
-                              Advance
-                            </span>
-                          )}
+                      <td className="py-4 pr-4">
+                        <div className="font-bold text-white">
+                          {dateFormatMode === 'month' ? formatMonthName(inv.month) : inv.month}
                         </div>
+                        <span className="text-[10px] text-slate-500 font-mono">#{inv.id}</span>
                       </td>
-                      <td className="py-4 pr-4 text-slate-200">৳{inv.total}</td>
+                      <td className="py-4 pr-4 text-slate-200 font-medium">৳{inv.total}</td>
                       <td className="py-4 pr-4 text-emerald-400 font-semibold">৳{inv.paidAmount}</td>
-                      <td className="py-4 pr-4 text-pink-400 font-semibold">৳{inv.dueAmount}</td>
-                      <td className="py-4 pr-4 text-slate-400">{new Date(inv.dueDate).toLocaleDateString('en-GB')}</td>
+                      <td className="py-4 pr-4 text-slate-300">
+                        {formatDisplayDate(inv.dueDate, dateFormatMode, true)}
+                      </td>
                       <td className="py-4 pr-4">
                         <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${
-                          isPaid
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : (isAdvance ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30')
+                          isPaid ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                         }`}>
-                          {inv.status === 'PAID' ? 'PAID' : (isAdvance ? 'ADVANCE' : 'UNPAID')}
+                          {inv.status}
                         </span>
                       </td>
                       <td className="py-4 text-right">
-                        {!isPaid ? (
-                          <button
-                            onClick={() => handlePay(inv.id)}
-                            disabled={isPaying}
-                            className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-[#E2136E] hover:bg-pink-600 text-white font-bold text-xs rounded-xl shadow-md shadow-pink-600/20 transition-all cursor-pointer disabled:opacity-60"
-                          >
-                            {isPaying ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Wait...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Smartphone className="w-3.5 h-3.5" />
-                                <span>Pay ৳{inv.dueAmount} with bKash</span>
-                              </>
-                            )}
-                          </button>
-                        ) : (
+                        <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => handlePrint(inv)}
-                            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
+                            title="Print Invoice Receipt"
                           >
-                            <Printer className="w-3.5 h-3.5" />
-                            <span>Receipt</span>
+                            <Printer className="w-4 h-4" />
                           </button>
-                        )}
+
+                          {isDue ? (
+                            <button
+                              onClick={() => handlePay(inv.id)}
+                              disabled={isPayingId === inv.id}
+                              className="px-3.5 py-1.5 bg-[#E2136E] hover:bg-pink-600 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50 cursor-pointer flex items-center space-x-1.5"
+                            >
+                              {isPayingId === inv.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Smartphone className="w-3.5 h-3.5" />
+                              )}
+                              <span>Pay ৳{inv.dueAmount || inv.total}</span>
+                            </button>
+                          ) : (
+                            <span className="text-emerald-400 font-semibold flex items-center space-x-1 text-xs px-2 py-1 bg-emerald-500/10 rounded-lg">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Paid</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -213,99 +230,62 @@ export default function CustomerInvoicesPage() {
         )}
       </div>
 
-      {/* Modal: Advance Payment */}
-      {advanceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-white">Pay Bill in Advance</h3>
-                <p className="text-xs text-slate-400">Recharge upcoming months via bKash</p>
-              </div>
-              <button
-                onClick={() => setAdvanceModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
+      {/* Printable Invoice Modal */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 print:p-0 print:static print:bg-transparent">
+          <div className="bg-white text-slate-900 rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-6 print:shadow-none print:p-0">
+            <div className="flex items-center justify-between border-b pb-4 print:hidden">
+              <h4 className="font-bold text-base">Invoice Receipt #{selectedInvoice.id}</h4>
+              <button onClick={() => setSelectedInvoice(null)} className="p-1 rounded-lg hover:bg-slate-100 cursor-pointer">
+                <X className="w-5 h-5 text-slate-600" />
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-300 uppercase">Duration</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[1, 2, 3].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        setAdvanceMonths(m);
-                        setCustomAdvanceAmount('');
-                      }}
-                      className={`p-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
-                        advanceMonths === m && !customAdvanceAmount
-                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {m} {m === 1 ? 'Month' : 'Months'}
-                    </button>
-                  ))}
+              <div className="text-center border-b pb-4">
+                <h2 className="text-xl font-black">BROADBAND INTERNET BILL</h2>
+                <p className="text-xs text-slate-500">Official Payment Statement • {formatMonthName(selectedInvoice.month)}</p>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b">
+                  <span className="text-slate-500">Billing Period:</span>
+                  <span className="font-bold">{formatMonthName(selectedInvoice.month)}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b">
+                  <span className="text-slate-500">Total Billed:</span>
+                  <span className="font-bold">৳{selectedInvoice.total}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b">
+                  <span className="text-slate-500">Amount Paid:</span>
+                  <span className="font-bold text-emerald-600">৳{selectedInvoice.paidAmount}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b">
+                  <span className="text-slate-500">Due Date:</span>
+                  <span className="font-medium">{formatDisplayDate(selectedInvoice.dueDate, 'month', true)}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b">
+                  <span className="text-slate-500">Status:</span>
+                  <span className="font-black text-blue-600">{selectedInvoice.status}</span>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-                  Or Custom Amount (৳)
-                </label>
-                <input
-                  type="number"
-                  placeholder="e.g. 1000"
-                  value={customAdvanceAmount}
-                  onChange={(e) => setCustomAdvanceAmount(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  onClick={handleAdvancePay}
-                  disabled={isPayingAdvance}
-                  className="w-full py-3 bg-[#E2136E] hover:bg-pink-600 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg shadow-pink-600/30 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-60"
-                >
-                  {isPayingAdvance ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Connecting bKash...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Smartphone className="w-4 h-4" />
-                      <span>Proceed to bKash Payment</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Hidden printable receipt */}
-      {selectedInvoice && (
-        <div className="hidden print:block fixed inset-0 bg-white text-slate-900 p-8 z-50">
-          <div className="max-w-md mx-auto border border-slate-300 rounded-2xl p-6 space-y-4 font-mono">
-            <h2 className="text-xl font-bold text-center">ISP BROADBAND BILL RECEIPT</h2>
-            <div className="border-b pb-2 text-xs space-y-1">
-              <p><strong>Invoice ID:</strong> #{selectedInvoice.id}</p>
-              <p><strong>Billing Month:</strong> {selectedInvoice.month}</p>
-              <p><strong>Status:</strong> PAID</p>
-              <p><strong>Total Amount:</strong> ৳{selectedInvoice.total}</p>
-              <p><strong>Amount Paid:</strong> ৳{selectedInvoice.paidAmount}</p>
-              <p><strong>Printed On:</strong> {new Date().toLocaleString()}</p>
+            <div className="flex justify-end space-x-3 pt-4 border-t print:hidden">
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 cursor-pointer flex items-center space-x-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Copy</span>
+              </button>
+              <button
+                onClick={() => setSelectedInvoice(null)}
+                className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-300 cursor-pointer"
+              >
+                Close
+              </button>
             </div>
-            <p className="text-[10px] text-center text-slate-500">Thank you for your timely bill payment!</p>
           </div>
         </div>
       )}

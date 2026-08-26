@@ -57,6 +57,41 @@ class InvoiceController {
       return res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  async updateDueDate(req, res) {
+    try {
+      const { id } = req.params;
+      const { dueDate } = req.body;
+      if (!dueDate) {
+        return res.status(400).json({ success: false, message: 'dueDate is required' });
+      }
+      const updated = await invoiceService.updateDueDate(id, dueDate, req.user?.id);
+      return res.status(200).json({
+        success: true,
+        data: updated,
+        message: 'Invoice due date updated successfully',
+      });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  async batchUpdateDueDate(req, res) {
+    try {
+      const { month, dueDate } = req.body;
+      if (!month || !dueDate) {
+        return res.status(400).json({ success: false, message: 'month and dueDate are required' });
+      }
+      const result = await invoiceService.batchUpdateDueDate(month, dueDate, req.user?.id);
+      return res.status(200).json({
+        success: true,
+        data: result,
+        message: `Updated due dates for ${result.updatedCount} unpaid invoices in ${month}`,
+      });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
 }
 
 module.exports = new InvoiceController();

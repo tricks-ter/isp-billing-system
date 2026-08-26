@@ -3,18 +3,18 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { customerPortalApi } from '../../services/customerPortalApi';
+import BkashSandboxGuide from '../../components/BkashSandboxGuide';
+import { formatMonthName, formatDisplayDate } from '../../utils/dateFormatter';
 import {
   Wifi, Activity, Zap, CreditCard, ShieldCheck, AlertTriangle,
   CheckCircle2, ArrowUpRight, Clock, ArrowRight, Smartphone,
-  Radio, LifeBuoy, FileText, Download, Loader2, Sparkles, Plus, Calendar
+  Radio, LifeBuoy, FileText, Download, Loader2, Sparkles, Plus, Calendar, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function CustomerDashboardPage() {
   const [isPaying, setIsPaying] = useState(false);
-  const [advanceMonths, setAdvanceMonths] = useState(1);
-  const [customAdvanceAmount, setCustomAdvanceAmount] = useState('');
-  const [paymentMode, setPaymentMode] = useState('advance'); // 'due' or 'advance'
+  const [dateFormatMode, setDateFormatMode] = useState('month'); // 'month' or 'exact'
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['customerDashboard'],
@@ -22,28 +22,10 @@ export default function CustomerDashboardPage() {
     refetchInterval: 5000,
   });
 
-  const handlePayBkash = async (options = {}) => {
+  const handlePayBkash = async (invoiceId) => {
     setIsPaying(true);
     try {
-      let payload = {};
-      if (options.invoiceId) {
-        payload = { invoiceId: options.invoiceId };
-      } else if (options.isAdvance) {
-        payload = {
-          isAdvance: true,
-          monthsCount: options.monthsCount || advanceMonths || 1,
-          customAmount: options.customAmount || (customAdvanceAmount ? parseFloat(customAdvanceAmount) : undefined),
-        };
-      } else if (hasDue && paymentMode === 'due' && firstDueInvoice) {
-        payload = { invoiceId: firstDueInvoice.id };
-      } else {
-        payload = {
-          isAdvance: true,
-          monthsCount: advanceMonths || 1,
-          customAmount: customAdvanceAmount ? parseFloat(customAdvanceAmount) : undefined,
-        };
-      }
-
+      const payload = invoiceId ? { invoiceId } : {};
       const res = await customerPortalApi.payBkash(payload);
       if (res.data?.data?.bkashURL) {
         window.location.href = res.data.data.bkashURL;
@@ -82,12 +64,12 @@ export default function CustomerDashboardPage() {
     );
   }
 
-  const { customer, liveSession, opticalSignal, billing, recentTickets } = data;
+  const { customer, liveSession = {}, opticalSignal = {}, billing = {}, recentTickets = [] } = data;
   const isSuspended = customer.status === 'SUSPENDED';
-  const hasDue = billing.totalDue > 0;
-  const firstDueInvoice = billing.unpaidInvoices?.[0];
-  const pkgPrice = customer.package?.price || 500;
-  const calculatedAdvanceTotal = customAdvanceAmount ? parseFloat(customAdvanceAmount) || pkgPrice : pkgPrice * advanceMonths;
+  const hasDue = (billing.totalDue || 0) > 0;
+  const firstDueInvoice = (billing.unpaidInvoices || [])[0];
+  const pkgPrice = customer.package?.price || 1000;
+  const currentMonthName = formatMonthName(billing.currentMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
 
   return (
     <div className="space-y-6 sm:space-y-8 w-full max-w-full overflow-hidden">
@@ -118,136 +100,68 @@ export default function CustomerDashboardPage() {
         </div>
       </div>
 
-      {/* Hero: bKash Payment & Advance Recharge Hub */}
-      <div className="bg-gradient-to-br from-[#1E112A] via-[#111827] to-[#0B0F19] border border-pink-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      {/* Hero: Running Month Billing & 1-Click bKash Payment */}
+      <div className="bg-gradient-to-br from-[#1E112A] via-[#111827] to-[#0B0F19] border border-pink-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-6">
         <div className="absolute right-0 top-0 w-80 h-80 bg-[#E2136E]/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
 
-        <div className="relative z-10 space-y-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-pink-500/20 text-pink-400 border border-pink-500/30 rounded-full text-[11px] font-bold">
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>bKash Instant Broadband Payment</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white">
-                {hasDue ? (
-                  <>Current Outstanding Due: <span className="text-pink-400">৳{billing.totalDue.toLocaleString()}</span></>
-                ) : (
-                  <>Account Status: <span className="text-emerald-400">All Invoices Paid (৳0 Due)</span></>
-                )}
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                Pay current dues or pay in advance for upcoming months. Successful payment instantly updates both your self-care portal and the ISP management dashboard.
-              </p>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-pink-500/20 text-pink-400 border border-pink-500/30 rounded-full text-[11px] font-bold">
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Current Month Bill • {currentMonthName}</span>
             </div>
-
-            {/* Mode Switcher: Pay Due vs Pay Advance */}
-            <div className="flex bg-slate-900/80 p-1 rounded-2xl border border-slate-800 self-start lg:self-center">
-              {hasDue && (
-                <button
-                  type="button"
-                  onClick={() => setPaymentMode('due')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    paymentMode === 'due' ? 'bg-[#E2136E] text-white shadow-md' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Pay Due Bill (৳{billing.totalDue})
-                </button>
+            
+            <h2 className="text-2xl sm:text-3xl font-black text-white">
+              {hasDue ? (
+                <>Due for {currentMonthName}: <span className="text-pink-400">৳{billing.totalDue.toLocaleString()}</span></>
+              ) : (
+                <>Bill for {currentMonthName}: <span className="text-emerald-400">Fully Paid (৳0 Due)</span></>
               )}
-              <button
-                type="button"
-                onClick={() => setPaymentMode('advance')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  paymentMode === 'advance' || !hasDue ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Pay in Advance
-              </button>
-            </div>
+            </h2>
+            
+            <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+              {firstDueInvoice?.dueDate ? (
+                <span>
+                  Bill Due Date: <strong className="text-amber-300">{formatDisplayDate(firstDueInvoice.dueDate, 'month', true)}</strong>. Settle your running month internet bill instantly.
+                </span>
+              ) : (
+                <span>Your account is in good standing with zero pending dues for {currentMonthName}.</span>
+              )}
+            </p>
           </div>
 
-          {/* Advance Options Selector (when advance mode is active) */}
-          {(paymentMode === 'advance' || !hasDue) && (
-            <div className="bg-slate-900/90 border border-slate-800 p-4 sm:p-5 rounded-2xl space-y-4">
-              <div className="flex items-center space-x-2 text-xs font-bold text-slate-300 uppercase tracking-wider">
-                <Calendar className="w-4 h-4 text-blue-400" />
-                <span>Select Advance Billing Duration:</span>
+          {/* Action Button: Pay Current Month Bill */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {hasDue ? (
+              <button
+                onClick={() => handlePayBkash(firstDueInvoice?.id)}
+                disabled={isPaying}
+                className="inline-flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-[#E2136E] to-pink-600 hover:from-pink-600 hover:to-[#E2136E] text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-xl shadow-pink-600/30 transition-all duration-200 disabled:opacity-70 cursor-pointer"
+              >
+                {isPaying ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Connecting to bKash...</span>
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="w-5 h-5" />
+                    <span>Pay ৳{billing.totalDue.toLocaleString()} with bKash</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="px-6 py-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-bold text-sm flex items-center space-x-2">
+                <CheckCircle2 className="w-5 h-5" />
+                <span>{currentMonthName} Bill Settled</span>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[1, 2, 3, 6].map((months) => (
-                  <button
-                    key={months}
-                    type="button"
-                    onClick={() => {
-                      setAdvanceMonths(months);
-                      setCustomAdvanceAmount('');
-                    }}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      advanceMonths === months && !customAdvanceAmount
-                        ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm shadow-blue-500/20'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{months} {months === 1 ? 'Month' : 'Months'} Advance</div>
-                    <div className="text-base font-black text-white mt-1">৳{(pkgPrice * months).toLocaleString()}</div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Custom amount field */}
-              <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-3">
-                <span className="text-xs text-slate-400">Or Custom Advance Amount (৳):</span>
-                <input
-                  type="number"
-                  placeholder="e.g. 1500"
-                  value={customAdvanceAmount}
-                  onChange={(e) => setCustomAdvanceAmount(e.target.value)}
-                  className="px-3.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[160px]"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Action Button: Pay with bKash */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
-            <button
-              onClick={() => {
-                if (paymentMode === 'due' && hasDue && firstDueInvoice) {
-                  handlePayBkash({ invoiceId: firstDueInvoice.id });
-                } else {
-                  handlePayBkash({
-                    isAdvance: true,
-                    monthsCount: advanceMonths || 1,
-                    customAmount: customAdvanceAmount ? parseFloat(customAdvanceAmount) : undefined,
-                  });
-                }
-              }}
-              disabled={isPaying}
-              className="inline-flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-[#E2136E] to-pink-600 hover:from-pink-600 hover:to-[#E2136E] text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-xl shadow-pink-600/30 transition-all duration-200 disabled:opacity-70 cursor-pointer"
-            >
-              {isPaying ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Connecting to bKash Gateway...</span>
-                </>
-              ) : (
-                <>
-                  <Smartphone className="w-5 h-5" />
-                  <span>
-                    Pay {paymentMode === 'due' && hasDue ? `৳${billing.totalDue}` : `৳${calculatedAdvanceTotal}`} with bKash
-                  </span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-
-            <span className="text-xs text-slate-400 flex items-center space-x-1.5 self-center">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>Official bKash Tokenized Checkout • Automated 24/7 Activation</span>
-            </span>
+            )}
           </div>
         </div>
+
+        {/* Embedded Sandbox Test Instructions */}
+        <BkashSandboxGuide />
       </div>
 
       {/* Grid: 3 Interactive Status Cards */}
@@ -273,11 +187,11 @@ export default function CustomerDashboardPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Assigned IP:</span>
-                <span className="font-mono text-slate-300">{liveSession.ipAddress}</span>
+                <span className="font-mono text-slate-300">{liveSession.ipAddress || '10.10.x.x'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Session Uptime:</span>
-                <span className="font-medium text-emerald-400">{liveSession.uptime}</span>
+                <span className="font-medium text-emerald-400">{liveSession.uptime || 'Active'}</span>
               </div>
             </div>
           </div>
@@ -313,7 +227,7 @@ export default function CustomerDashboardPage() {
                     ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                     : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                 }`}>
-                  {opticalSignal.signalStatus}
+                  {opticalSignal.signalStatus || 'OPTIMAL'}
                 </span>
                 <span className="text-xs text-slate-400">Optical Rx Power</span>
               </div>
@@ -322,7 +236,7 @@ export default function CustomerDashboardPage() {
             <div className="mt-6 pt-4 border-t border-slate-800/80 space-y-2.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">ONU Model:</span>
-                <span className="font-medium text-slate-200">{opticalSignal.model}</span>
+                <span className="font-medium text-slate-200">{opticalSignal.model || 'Standard GPON'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">PON Port:</span>
@@ -387,32 +301,54 @@ export default function CustomerDashboardPage() {
         </div>
       </div>
 
-      {/* Recent Invoices Table */}
+      {/* Recent Invoices Table with Date Format Toggle */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-white">Recent Invoices Statement</h3>
+            <h3 className="text-lg font-bold text-white">Monthly Invoices Statement</h3>
             <p className="text-xs text-slate-400">View and settle your monthly internet bills</p>
           </div>
-          <Link
-            to="/portal/invoices"
-            className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center space-x-1"
-          >
-            <span>View All Invoices</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+
+          <div className="flex items-center space-x-3">
+            {/* Toggle Button: Month Name vs Exact Date */}
+            <button
+              onClick={() => setDateFormatMode(dateFormatMode === 'month' ? 'exact' : 'month')}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium text-slate-300 flex items-center space-x-1.5 transition cursor-pointer"
+              title="Switch date format display"
+            >
+              {dateFormatMode === 'month' ? (
+                <>
+                  <ToggleLeft className="w-4 h-4 text-blue-400" />
+                  <span>Month View (e.g. {currentMonthName})</span>
+                </>
+              ) : (
+                <>
+                  <ToggleRight className="w-4 h-4 text-emerald-400" />
+                  <span>Exact Date (DD/MM/YYYY)</span>
+                </>
+              )}
+            </button>
+
+            <Link
+              to="/portal/invoices"
+              className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center space-x-1"
+            >
+              <span>All Invoices</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-800 text-slate-400 uppercase font-mono">
-                <th className="pb-3 pr-4">Month</th>
+                <th className="pb-3 pr-4">Billing Month</th>
                 <th className="pb-3 pr-4">Total Amount</th>
                 <th className="pb-3 pr-4">Paid</th>
                 <th className="pb-3 pr-4">Due Date</th>
                 <th className="pb-3 pr-4">Status</th>
-                <th className="pb-3 text-right">bKash Payment</th>
+                <th className="pb-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -420,10 +356,14 @@ export default function CustomerDashboardPage() {
                 const isPaid = inv.status === 'PAID';
                 return (
                   <tr key={inv.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3.5 pr-4 font-bold text-white">{inv.month}</td>
+                    <td className="py-3.5 pr-4 font-bold text-white">
+                      {dateFormatMode === 'month' ? formatMonthName(inv.month) : inv.month}
+                    </td>
                     <td className="py-3.5 pr-4 text-slate-200">৳{inv.total}</td>
                     <td className="py-3.5 pr-4 text-emerald-400 font-semibold">৳{inv.paidAmount}</td>
-                    <td className="py-3.5 pr-4 text-slate-400">{new Date(inv.dueDate).toLocaleDateString('en-GB')}</td>
+                    <td className="py-3.5 pr-4 text-slate-400">
+                      {formatDisplayDate(inv.dueDate, dateFormatMode, true)}
+                    </td>
                     <td className="py-3.5 pr-4">
                       <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                         isPaid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
@@ -434,10 +374,10 @@ export default function CustomerDashboardPage() {
                     <td className="py-3.5 text-right">
                       {!isPaid ? (
                         <button
-                          onClick={() => handlePayBkash({ invoiceId: inv.id })}
+                          onClick={() => handlePayBkash(inv.id)}
                           className="px-3 py-1.5 bg-[#E2136E] hover:bg-pink-600 text-white font-bold text-[11px] rounded-lg transition-colors cursor-pointer"
                         >
-                          bKash Pay
+                          Pay with bKash
                         </button>
                       ) : (
                         <span className="text-emerald-400 font-medium flex items-center justify-end space-x-1">

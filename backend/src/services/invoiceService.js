@@ -181,6 +181,72 @@ class InvoiceService {
       unpaidInvoices: totalInvoices - paidInvoices,
     };
   }
+
+  async updateDueDate(invoiceId, newDueDate, userId) {
+    const id = parseInt(invoiceId);
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: { customer: true },
+    });
+
+    if (!invoice) throw new Error('Invoice not found');
+
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data: { dueDate: new Date(newDueDate) },
+      include: { customer: true, payments: true },
+    });
+
+    if (userId) {
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: parseInt(userId),
+            action: 'UPDATE_INVOICE_DUE_DATE',
+            details: JSON.stringify({
+              invoiceId: id,
+              customerName: invoice.customer?.name,
+              month: invoice.month,
+              newDueDate,
+            }),
+          },
+        });
+      } catch (_) {}
+    }
+
+    return updated;
+  }
+
+  async batchUpdateDueDate(month, newDueDate, userId) {
+    const dueDateObj = new Date(newDueDate);
+    const result = await prisma.invoice.updateMany({
+      where: {
+        month,
+        status: { in: ['UNPAID', 'PARTIALLY_PAID'] },
+      },
+      data: {
+        dueDate: dueDateObj,
+      },
+    });
+
+    if (userId) {
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: parseInt(userId),
+            action: 'BATCH_UPDATE_DUE_DATE',
+            details: JSON.stringify({
+              month,
+              newDueDate,
+              updatedCount: result.count,
+            }),
+          },
+        });
+      } catch (_) {}
+    }
+
+    return { updatedCount: result.count, newDueDate, month };
+  }
 }
 
 module.exports = new InvoiceService();
