@@ -1,10 +1,12 @@
-// frontend/src/pages/PaymentFailedPage.jsx
 import { useSearchParams, Link } from 'react-router-dom';
 import { XCircle, Wifi, AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
+import useCustomerAuthStore from '../store/customerAuthStore';
 
 export default function PaymentFailedPage() {
   const [searchParams] = useSearchParams();
   const message = searchParams.get('message') || 'Payment could not be completed';
+  const isCustomerAuth = useCustomerAuthStore((state) => state.isAuthenticated);
+  const returnPath = isCustomerAuth ? '/portal/dashboard' : '/dashboard';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 md:p-8">
@@ -29,7 +31,7 @@ export default function PaymentFailedPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-black text-white">Payment Failed / Cancelled</h2>
+            <h2 className="text-2xl font-black text-white">Payment Cancelled / Incomplete</h2>
             <p className="text-sm text-slate-400 mt-2 max-w-sm mx-auto">
               {decodeURIComponent(message)}
             </p>
@@ -43,20 +45,20 @@ export default function PaymentFailedPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button
-              onClick={() => window.history.back()}
+            <Link
+              to={returnPath}
               className="flex-1 py-3 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold text-sm transition-colors flex items-center justify-center space-x-2 cursor-pointer shadow-lg shadow-pink-600/20"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Try Again</span>
-            </button>
+            </Link>
 
             <Link
-              to="/dashboard"
+              to={returnPath}
               className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition-colors flex items-center justify-center space-x-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Return Home</span>
+              <span>Return to Dashboard</span>
             </Link>
           </div>
         </div>
