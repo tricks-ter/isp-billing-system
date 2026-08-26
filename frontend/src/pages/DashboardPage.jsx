@@ -49,7 +49,7 @@ export default function DashboardPage() {
 
   const { data: activityData, isLoading: activityLoading, refetch: refetchActivity } = useQuery({
     queryKey: ['recentActivities'],
-    queryFn: () => activityApi.getRecent(5).then(res => res.data.data),
+    queryFn: () => activityApi.getRecent(5).then(res => res.data.data?.logs || (Array.isArray(res.data.data) ? res.data.data : [])),
     refetchInterval: 5000,
   });
 
@@ -381,19 +381,31 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {activityData?.map((item) => (
-              <div key={item.id} className="flex items-start space-x-3 text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60">
-                <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-slate-800 dark:text-slate-200 font-medium truncate">
-                    {item.action.replace(/_/g, ' ')}: {item.details ? JSON.stringify(JSON.parse(item.details)) : ''}
-                  </p>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {new Date(item.createdAt).toLocaleString('en-GB')}
-                  </span>
+            {((Array.isArray(activityData) ? activityData : activityData?.logs) || []).map((item) => {
+              let detailStr = '';
+              try {
+                if (item.details) {
+                  const p = typeof item.details === 'string' ? JSON.parse(item.details) : item.details;
+                  detailStr = typeof p === 'object' ? JSON.stringify(p) : String(p);
+                }
+              } catch (_) {
+                detailStr = String(item.details || '');
+              }
+
+              return (
+                <div key={item.id} className="flex items-start space-x-3 text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60">
+                  <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-800 dark:text-slate-200 font-medium truncate">
+                      {item.action?.replace(/_/g, ' ')}: {detailStr}
+                    </p>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {new Date(item.createdAt).toLocaleString('en-GB')}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
