@@ -23,6 +23,8 @@ class CustomerService {
         include: {
           package: true,
           router: true,
+          olt: { select: { id: true, name: true, brand: true } },
+          onu: { select: { id: true, portNumber: true, onuId: true, macAddress: true, serialNumber: true, status: true, rxPower: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -46,6 +48,8 @@ class CustomerService {
       include: {
         package: true,
         router: true,
+        olt: true,
+        onu: true,
         invoices: {
           orderBy: { createdAt: 'desc' },
           take: 10,
@@ -63,8 +67,9 @@ class CustomerService {
     const pppoeUsername = data.pppoeUsername || `pppoe_${uuidv4().slice(0, 8)}`;
     const pppoePassword = data.pppoePassword || uuidv4().slice(0, 12);
 
-    // Handle routerId: convert empty string to null
+    // Handle routerId & oltId: convert empty string to null
     const routerId = data.routerId ? parseInt(data.routerId) : null;
+    const oltId = data.oltId ? parseInt(data.oltId) : null;
 
     // Create customer in database
     const customer = await prisma.customer.create({
@@ -78,11 +83,16 @@ class CustomerService {
         status: 'ACTIVE',
         packageId: parseInt(data.packageId),
         routerId: routerId,
+        oltId: oltId,
+        fiberSplitter: data.fiberSplitter || null,
+        fiberCore: data.fiberCore || null,
         joinDate: new Date(),
       },
       include: {
         package: true,
         router: true,
+        olt: true,
+        onu: true,
       },
     });
 
@@ -124,8 +134,9 @@ class CustomerService {
       throw new Error('Customer not found');
     }
 
-    // Handle routerId: convert empty string to null
+    // Handle routerId & oltId: convert empty string to null
     const newRouterId = data.routerId ? parseInt(data.routerId) : null;
+    const newOltId = data.oltId ? parseInt(data.oltId) : null;
 
     // Update customer in database
     const updatedCustomer = await prisma.customer.update({
@@ -137,10 +148,15 @@ class CustomerService {
         area: data.area,
         packageId: parseInt(data.packageId),
         routerId: newRouterId,
+        oltId: newOltId,
+        fiberSplitter: data.fiberSplitter !== undefined ? data.fiberSplitter : undefined,
+        fiberCore: data.fiberCore !== undefined ? data.fiberCore : undefined,
       },
       include: {
         package: true,
         router: true,
+        olt: true,
+        onu: true,
       },
     });
 

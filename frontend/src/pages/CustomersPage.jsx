@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerApi } from '../services/customerApi';
 import { packageApi } from '../services/packageApi';
-import { Plus, Search, Edit, Trash2, Pause, Play, Users, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Pause, Play, Users, RefreshCw, Radio } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
 import CustomerForm from '../components/CustomerForm';
+import OpticalPowerBadge from '../components/OpticalPowerBadge';
 import toast from 'react-hot-toast';
 
 export default function CustomersPage() {
@@ -111,6 +112,7 @@ export default function CustomersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Package</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Router</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">OLT / Fiber Signal</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">PPPoE</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
@@ -118,9 +120,9 @@ export default function CustomersPage() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {isLoading ? (
-                <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+                <tr><td colSpan="8" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
               ) : data?.customers?.length === 0 ? (
-                <tr><td colSpan="7" className="px-6 py-12 text-center text-slate-500">No customers found</td></tr>
+                <tr><td colSpan="8" className="px-6 py-12 text-center text-slate-500">No customers found</td></tr>
               ) : (
                 data?.customers?.map((customer) => (
                   <tr key={customer.id} className="hover:bg-slate-50">
@@ -138,6 +140,16 @@ export default function CustomersPage() {
                         <div className="text-sm text-slate-900">{customer.router.name}</div>
                       ) : (
                         <span className="text-xs text-slate-400">No router</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {customer.olt ? (
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-slate-800 block">{customer.olt.name}</span>
+                          <OpticalPowerBadge power={customer.opticalPower || customer.onu?.rxPower} status={customer.onu?.status} size="sm" />
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">No OLT</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm font-mono text-slate-600">{customer.pppoeUsername}</td>

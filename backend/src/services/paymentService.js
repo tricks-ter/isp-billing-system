@@ -1,6 +1,7 @@
 // FILE: ./backend/src/services/paymentService.js
 const prisma = require('../config/db');
 const mikrotikService = require('./mikrotikService');
+const oltService = require('./oltService');
 
 class PaymentService {
   async recordPayment(data, userId) {
@@ -11,7 +12,7 @@ class PaymentService {
       where: { id: parseInt(invoiceId) },
       include: {
         payments: true,
-        customer: { include: { router: true } }
+        customer: { include: { router: true, olt: true } }
       },
     });
 
@@ -37,7 +38,7 @@ class PaymentService {
           invoiceId: parseInt(invoiceId),
           amount: parseFloat(amount),
           method,
-          receivedBy: userId,
+          receivedBy: userId || null,
           notes: notes || null,
         },
       });
@@ -53,7 +54,7 @@ class PaymentService {
         data: { status: newStatus },
       });
 
-      // Update DB status, but DO NOT call MikroTik API here
+      // Update DB status, but DO NOT call hardware APIs inside transaction
       if (newStatus === 'PAID' && invoice.customer.status === 'SUSPENDED') {
         await tx.customer.update({
           where: { id: invoice.customer.id },
@@ -65,17 +66,27 @@ class PaymentService {
       return payment;
     });
 
-    // 3. EXTERNAL API CALL (Executed ONLY after DB transaction successfully commits)
-    if (customerRestored && invoice.customer.routerId && invoice.customer.router) {
-      try {
-        await mikrotikService.enablePppoeSecret(
-          invoice.customer.router,
-          invoice.customer.pppoeUsername
-        );
-      } catch (error) {
-        console.error('Failed to enable PPPoE on auto-restore:', error);
-        // We don't throw here to avoid confusing the user, 
-        // the payment is saved, router just needs manual sync.
+    // 3. EXTERNAL HARDWARE RESTORE HOOKS (Executed ONLY after DB transaction successfully commits)
+    if (customerRestored) {
+      // Restore MikroTik PPPoE
+      if (invoice.customer.routerId && invoice.customer.router) {
+        try {
+          await mikrotikService.enablePppoeSecret(
+            invoice.customer.router,
+            invoice.customer.pppoeUsername
+          );
+        } catch (error) {
+          console.error('Failed to enable PPPoE on auto-restore:', error);
+        }
+      }
+
+      // Restore BDCOM OLT ONU Port
+      if (invoice.customer.oltId) {
+        try {
+          await oltService.toggleCustomerOnu(invoice.customer.id, 'enable');
+        } catch (error) {
+          console.error('Failed to enable BDCOM OLT ONU on auto-restore:', error);
+        }
       }
     }
 

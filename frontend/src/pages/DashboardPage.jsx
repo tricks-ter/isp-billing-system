@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { customerApi } from '../services/customerApi';
 import { invoiceApi } from '../services/invoiceApi';
 import { activityApi } from '../services/activityApi';
-import { Users, Wifi, CreditCard, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { oltApi } from '../services/oltApi';
+import { Users, Wifi, CreditCard, AlertTriangle, TrendingUp, TrendingDown, Layers, Radio, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import useAuthStore from '../store/authStore';
 
@@ -15,6 +16,12 @@ export default function DashboardPage() {
   const { data: customersData } = useQuery({
     queryKey: ['customers', { page: 1, limit: 1 }],
     queryFn: () => customerApi.getAll({ page: 1, limit: 1 }).then(res => res.data.data),
+  });
+
+  const { data: opticalSummary } = useQuery({
+    queryKey: ['opticalSummary'],
+    queryFn: () => oltApi.getOpticalSummary().then(res => res.data.data),
+    staleTime: 60000,
   });
 
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
@@ -280,6 +287,56 @@ export default function DashboardPage() {
                 <span className="font-medium text-slate-900 dark:text-slate-100">{item.value}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Optical & OLT Network Health Card */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">FTTH & OLT Optical Health</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Live fiber power and access node status</p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-primary">
+            {opticalSummary?.totalOlts ?? 0} OLT Nodes Active
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-xl flex items-center justify-between">
+            <div>
+              <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold block">Optimal Signal (&gt; -24 dBm)</span>
+              <span className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
+                {opticalSummary?.opticalDistribution?.optimal ?? 0} ONUs
+              </span>
+            </div>
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          </div>
+
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-center justify-between">
+            <div>
+              <span className="text-[11px] text-amber-800 dark:text-amber-300 font-semibold block">Marginal (-24 to -27 dBm)</span>
+              <span className="text-xl font-bold text-amber-700 dark:text-amber-300">
+                {opticalSummary?.opticalDistribution?.marginal ?? 0} ONUs
+              </span>
+            </div>
+            <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          </div>
+
+          <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl flex items-center justify-between">
+            <div>
+              <span className="text-[11px] text-red-800 dark:text-red-300 font-semibold block">Critical / LOS (&lt; -27 dBm)</span>
+              <span className="text-xl font-bold text-red-700 dark:text-red-300">
+                {opticalSummary?.opticalDistribution?.critical ?? 0} ONUs
+              </span>
+            </div>
+            <Radio className="w-6 h-6 text-red-600 dark:text-red-400 animate-pulse" />
           </div>
         </div>
       </div>

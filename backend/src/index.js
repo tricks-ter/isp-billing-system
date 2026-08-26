@@ -17,6 +17,8 @@ const auditRoutes = require('./routes/auditRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const oltRoutes = require('./routes/oltRoutes');
+const bkashRoutes = require('./routes/bkashRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +49,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
 // --- Routes ---
@@ -61,6 +64,8 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/olts', oltRoutes);
+app.use('/api/bkash', bkashRoutes);
 
 // --- Health Check ---
 app.get('/api/health', (req, res) => {
@@ -88,5 +93,6 @@ app.listen(PORT, () => {
   console.log(`🚀 ISP Billing API running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔧 MikroTik Mock Mode: ${process.env.MIKROTIK_MOCK_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
-  console.log(` SMS Mock Mode: ${process.env.SMS_MOCK_MODE !== 'false' ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`🔧 OLT Mock Mode: ${process.env.OLT_MOCK_MODE !== 'false' ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`📱 SMS Mock Mode: ${process.env.SMS_MOCK_MODE !== 'false' ? 'ENABLED' : 'DISABLED'}`);
 });

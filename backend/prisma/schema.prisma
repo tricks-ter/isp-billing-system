@@ -43,6 +43,12 @@ model Customer {
   package       Package   @relation(fields: [packageId], references: [id])
   routerId      Int?
   router        Router?   @relation(fields: [routerId], references: [id])
+  oltId         Int?
+  olt           Olt?      @relation(fields: [oltId], references: [id])
+  onu           Onu?
+  opticalPower  Float?
+  fiberSplitter String?
+  fiberCore     String?
   invoices      Invoice[]
   joinDate      DateTime  @default(now())
   expireDate    DateTime?
@@ -51,6 +57,7 @@ model Customer {
 
   @@index([status])
   @@index([pppoeUsername])
+  @@index([oltId])
 }
 
 model Package {
@@ -63,32 +70,37 @@ model Package {
 }
 
 model Invoice {
-  id         Int       @id @default(autoincrement())
-  customerId Int
-  customer   Customer  @relation(fields: [customerId], references: [id])
-  month      String
-  amount     Float
-  discount   Float     @default(0)
-  vat        Float     @default(0)
-  total      Float
-  dueDate    DateTime
-  status     String    @default("UNPAID")
-  payments   Payment[]
-  createdAt  DateTime  @default(now())
+  id          Int       @id @default(autoincrement())
+  customerId  Int
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  month       String
+  amount      Float
+  discount    Float     @default(0)
+  vat         Float     @default(0)
+  total       Float
+  dueDate     DateTime
+  status      String    @default("UNPAID")
+  publicToken String?   @unique
+  payments    Payment[]
+  createdAt   DateTime  @default(now())
 
   @@unique([customerId, month])
 }
 
 model Payment {
-  id         Int      @id @default(autoincrement())
-  invoiceId  Int
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
-  amount     Float
-  method     String
-  receivedBy Int
-  receiver   User     @relation(fields: [receivedBy], references: [id])
-  notes      String?
-  date       DateTime @default(now())
+  id                   Int      @id @default(autoincrement())
+  invoiceId            Int
+  invoice              Invoice  @relation(fields: [invoiceId], references: [id])
+  amount               Float
+  method               String
+  receivedBy           Int?
+  receiver             User?    @relation(fields: [receivedBy], references: [id])
+  trxId                String?  @unique
+  gatewayPaymentId     String?
+  gatewayStatus        String?
+  gatewayCustomerPhone String?
+  notes                String?
+  date                 DateTime @default(now())
 }
 
 model Router {
@@ -165,4 +177,120 @@ model SystemSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+enum OltBrand {
+  BDCOM
+  ECOM
+  VSOL
+  HUAWEI
+  GENERIC
+}
+
+enum PonType {
+  EPON
+  GPON
+}
+
+enum CliProtocol {
+  TELNET
+  SSH
+}
+
+enum OnuStatus {
+  ONLINE
+  OFFLINE
+  LOS
+  DYING_GASP
+  UNREGISTERED
+}
+
+model Olt {
+  id              Int          @id @default(autoincrement())
+  name            String
+  brand           OltBrand     @default(BDCOM)
+  ponType         PonType      @default(EPON)
+  ipAddress       String
+  snmpCommunity   String       @default("public")
+  snmpPort        Int          @default(161)
+  cliProtocol     CliProtocol  @default(TELNET)
+  cliPort         Int          @default(23)
+  username        String
+  password        String
+  enablePassword  String?      // Required for BDCOM 'enable' privileged mode
+  ponPortCount    Int          @default(4)
+  uplinkPortCount Int          @default(2)
+  location        String?
+  status          String       @default("ONLINE")
+  isActive        Boolean      @default(true)
+  isMock          Boolean      @default(false)
+  hardwareModel   String?
+  firmwareVersion String?
+  uptime          String?
+  cpuUsage        Float?
+  temperature     Float?
+  lastSyncAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  ponPorts        PonPort[]
+  onus            Onu[]
+  customers       Customer[]
+}
+
+model PonPort {
+  id          Int       @id @default(autoincrement())
+  oltId       Int
+  olt         Olt       @relation(fields: [oltId], references: [id], onDelete: Cascade)
+  portNumber  Int       // 1..16
+  portName    String    // e.g. "EPON0/1" or "GPON0/1"
+  adminStatus String    @default("UP") // UP, DOWN
+  operStatus  String    @default("UP") // UP, DOWN
+  maxOnus     Int       @default(64)
+  sfpModel    String?
+  txPower     Float?    // SFP Optical Transmit Power (dBm, e.g. +4.5)
+  rxPower     Float?    // OLT aggregate Rx Power (dBm)
+  temperature Float?    // SFP Temperature (°C)
+  voltage     Float?    // Voltage (V)
+  current     Float?    // Current (mA)
+  description String?
+
+  onus        Onu[]
+
+  @@unique([oltId, portNumber])
+}
+
+model Onu {
+  id                   Int        @id @default(autoincrement())
+  oltId                Int
+  olt                  Olt        @relation(fields: [oltId], references: [id], onDelete: Cascade)
+  ponPortId            Int?
+  ponPortRef           PonPort?   @relation(fields: [ponPortId], references: [id], onDelete: SetNull)
+  portNumber           Int        // 1..16
+  onuId                Int        // Slot/LLID on PON port (1..64)
+  macAddress           String?    // For EPON (e.g. "E0:67:B3:XX:XX:XX")
+  serialNumber         String?    // For GPON (e.g. "BDCM12345678")
+  name                 String?    // Customer or ONU label
+  model                String?    // e.g. "V2801SG", "HG6143D"
+  vendor               String?
+  status               OnuStatus  @default(ONLINE)
+  rxPower              Float?     // ONU Received Optical Power in dBm (e.g. -21.5 dBm)
+  txPower              Float?     // ONU Transmit Optical Power in dBm (e.g. +2.1 dBm)
+  oltRxPower           Float?     // OLT Received Optical Power from this ONU (dBm)
+  distance             Float?     // Distance in meters (e.g. 1450m)
+  vlanId               Int?
+  vlanMode             String?    @default("TAG") // TAG, TRANSLATE, TRANSPARENT
+  isAuthorized         Boolean    @default(true)
+  lastOnline           DateTime?
+  lastOffline          DateTime?
+  lastDeregisterReason String?    // "Loss of Signal (LOS)", "Power Off (Dying Gasp)"
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  customerId           Int?       @unique
+  customer             Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([oltId, portNumber, onuId])
+  @@index([macAddress])
+  @@index([serialNumber])
 }

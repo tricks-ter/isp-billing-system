@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceApi } from '../services/invoiceApi';
 import { paymentApi } from '../services/paymentApi';
 import { notificationApi } from '../services/notificationApi';
-import { FileText, Plus, CreditCard, Eye, Calendar, Download, Send } from 'lucide-react';
+import { bkashApi } from '../services/bkashApi';
+import { FileText, Plus, CreditCard, Eye, Calendar, Download, Send, Link2, ExternalLink } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -106,6 +107,36 @@ export default function BillingPage() {
     exportCSV(dataToExport, columns, `invoices_${month}`);
   };
 
+  const handleCopyQuickPayLink = async (invoiceId) => {
+    try {
+      const res = await bkashApi.generateQuickPayLink(invoiceId);
+      const url = res.data?.data?.quickPayUrl;
+      if (url) {
+        await navigator.clipboard.writeText(url);
+        toast.success('Customer Quick-Pay link copied to clipboard!');
+      }
+    } catch (err) {
+      toast.error('Failed to generate quick pay link');
+    }
+  };
+
+  const handleBkashOnlinePay = async (invoice) => {
+    const loadingToast = toast.loading('Initiating bKash payment...');
+    try {
+      const res = await bkashApi.createPayment({
+        invoiceId: invoice.id,
+        payerReference: invoice.customer?.phone,
+      });
+      toast.dismiss(loadingToast);
+      if (res.data?.data?.bkashURL) {
+        window.location.href = res.data.data.bkashURL;
+      }
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error(err.response?.data?.message || 'Failed to initiate bKash payment');
+    }
+  };
+
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Summary Cards */}
@@ -123,9 +154,9 @@ export default function BillingPage() {
             <p className="text-xs text-green-600 mb-1">Collected</p>
             <p className="text-xl lg:text-2xl font-bold text-green-700">৳{summary.totalPaid.toLocaleString()}</p>
           </div>
-          <div className="bg-white rounded-xl border border-red-200 bg-red-50 p-4">
-            <p className="text-xs text-red-600 mb-1">Due</p>
-            <p className="text-xl lg:text-2xl font-bold text-red-700">৳{summary.totalDue.toLocaleString()}</p>
+          <div className="bg-white rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs text-amber-600 mb-1">Total Due</p>
+            <p className="text-xl lg:text-2xl font-bold text-amber-700">৳{summary.totalDue.toLocaleString()}</p>
           </div>
         </div>
       )}
@@ -210,6 +241,14 @@ export default function BillingPage() {
                   <td className="px-6 py-4">{getStatusBadge(inv.status, inv.dueAmount)}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end space-x-1">
+                      {/* Copy Customer Quick-Pay Link */}
+                      <button
+                        onClick={() => handleCopyQuickPayLink(inv.id)}
+                        className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg"
+                        title="Copy Customer Quick-Pay Link"
+                      >
+                        <Link2 className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleViewDetails(inv)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -218,13 +257,24 @@ export default function BillingPage() {
                         <Eye className="w-4 h-4" />
                       </button>
                       {inv.status !== 'PAID' && (
-                        <button
-                          onClick={() => handlePay(inv)}
-                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
-                          title="Collect Payment"
-                        >
-                          <CreditCard className="w-4 h-4" />
-                        </button>
+                        <>
+                          {/* Online bKash Checkout */}
+                          <button
+                            onClick={() => handleBkashOnlinePay(inv)}
+                            className="p-1.5 text-pink-600 hover:bg-pink-50 rounded-lg font-bold text-xs flex items-center"
+                            title="Pay with bKash"
+                          >
+                            <span className="text-[10px] px-1 py-0.5 bg-pink-100 text-pink-700 rounded font-black mr-0.5">bKash</span>
+                          </button>
+                          {/* Manual Cash/POS Collect */}
+                          <button
+                            onClick={() => handlePay(inv)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
+                            title="Collect Manual Cash Payment"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
