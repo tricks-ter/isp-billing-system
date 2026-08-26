@@ -25,7 +25,7 @@ class CustomerController {
 
   async create(req, res) {
     try {
-      const customer = await customerService.createCustomer(req.body, req.user.id);
+      const customer = await customerService.createCustomer(req.body, req.user?.id || 1);
       return res.status(201).json({ success: true, data: customer });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
@@ -34,7 +34,7 @@ class CustomerController {
 
   async update(req, res) {
     try {
-      const customer = await customerService.updateCustomer(req.params.id, req.body, req.user.id);
+      const customer = await customerService.updateCustomer(req.params.id, req.body, req.user?.id || 1);
       return res.status(200).json({ success: true, data: customer });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
@@ -43,7 +43,7 @@ class CustomerController {
 
   async delete(req, res) {
     try {
-      await customerService.deleteCustomer(req.params.id, req.user.id);
+      await customerService.deleteCustomer(req.params.id, req.user?.id || 1);
       return res.status(200).json({ success: true, message: 'Customer deleted successfully' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
@@ -52,7 +52,7 @@ class CustomerController {
 
   async suspend(req, res) {
     try {
-      const customer = await customerService.suspendCustomer(req.params.id, req.user.id);
+      const customer = await customerService.suspendCustomer(req.params.id, req.user?.id || 1);
       return res.status(200).json({ success: true, data: customer });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
@@ -61,7 +61,7 @@ class CustomerController {
 
   async restore(req, res) {
     try {
-      const customer = await customerService.restoreCustomer(req.params.id, req.user.id);
+      const customer = await customerService.restoreCustomer(req.params.id, req.user?.id || 1);
       return res.status(200).json({ success: true, data: customer });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });

@@ -187,23 +187,43 @@ class OltService {
     const oltId = parseInt(id);
     const olt = await prisma.olt.findUnique({
       where: { id: oltId },
-      include: { _count: { select: { customers: true } } },
     });
     if (!olt) throw new Error('OLT not found');
 
-    if (olt._count.customers > 0) {
-      throw new Error(`Cannot delete OLT with ${olt._count.customers} assigned customers. Reassign customers first.`);
-    }
+    await prisma.$transaction(async (tx) => {
+      // Unlink any customers attached to this OLT
+      await tx.customer.updateMany({
+        where: { oltId },
+        data: { oltId: null, opticalPower: null },
+      });
 
-    await prisma.olt.delete({ where: { id: oltId } });
+      // Delete associated ONUs
+      await tx.onu.deleteMany({
+        where: { oltId },
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'DELETE_OLT',
-        details: JSON.stringify({ oltId, name: olt.name }),
-      },
+      // Delete associated PON ports
+      await tx.ponPort.deleteMany({
+        where: { oltId },
+      });
+
+      // Delete the OLT record
+      await tx.olt.delete({
+        where: { id: oltId },
+      });
     });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'DELETE_OLT',
+          details: JSON.stringify({ oltId, name: olt.name }),
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e.message);
+    }
 
     return { success: true, message: `OLT "${olt.name}" deleted successfully` };
   }

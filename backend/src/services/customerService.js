@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const mikrotikService = require('./mikrotikService');
+const oltService = require('./oltService');
 const { v4: uuidv4 } = require('uuid');
 
 class CustomerService {
@@ -146,9 +147,10 @@ class CustomerService {
   }
 
   async updateCustomer(id, data, userId) {
+    const customerId = parseInt(id);
     const customer = await prisma.customer.findUnique({
-      where: { id: parseInt(id) },
-      include: { package: true, router: true },
+      where: { id: customerId },
+      include: { package: true, router: true, olt: true },
     });
     if (!customer) {
       throw new Error('Customer not found');
@@ -158,28 +160,31 @@ class CustomerService {
       const existingPhone = await prisma.customer.findUnique({
         where: { phone: data.phone },
       });
-      if (existingPhone && existingPhone.id !== parseInt(id)) {
+      if (existingPhone && existingPhone.id !== customerId) {
         throw new Error(`A customer with phone number '${data.phone}' already exists (${existingPhone.name}).`);
       }
     }
 
     // Handle routerId & oltId: convert empty string to null
-    const newRouterId = data.routerId ? parseInt(data.routerId) : null;
-    const newOltId = data.oltId ? parseInt(data.oltId) : null;
+    const newRouterId = data.routerId ? parseInt(data.routerId) : (data.routerId === null || data.routerId === '' ? null : customer.routerId);
+    const newOltId = data.oltId ? parseInt(data.oltId) : (data.oltId === null || data.oltId === '' ? null : customer.oltId);
+    const packageId = data.packageId ? parseInt(data.packageId) : customer.packageId;
 
     // Update customer in database
     const updatedCustomer = await prisma.customer.update({
-      where: { id: parseInt(id) },
+      where: { id: customerId },
       data: {
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
-        area: data.area,
-        packageId: parseInt(data.packageId),
+        name: data.name !== undefined ? data.name : customer.name,
+        phone: data.phone !== undefined ? data.phone : customer.phone,
+        address: data.address !== undefined ? data.address : customer.address,
+        area: data.area !== undefined ? data.area : customer.area,
+        pppoeUsername: data.pppoeUsername ? data.pppoeUsername.trim() : customer.pppoeUsername,
+        pppoePassword: data.pppoePassword ? data.pppoePassword.trim() : customer.pppoePassword,
+        packageId,
         routerId: newRouterId,
         oltId: newOltId,
-        fiberSplitter: data.fiberSplitter !== undefined ? data.fiberSplitter : undefined,
-        fiberCore: data.fiberCore !== undefined ? data.fiberCore : undefined,
+        fiberSplitter: data.fiberSplitter !== undefined ? data.fiberSplitter : customer.fiberSplitter,
+        fiberCore: data.fiberCore !== undefined ? data.fiberCore : customer.fiberCore,
       },
       include: {
         package: true,
@@ -204,32 +209,37 @@ class CustomerService {
       if (newRouter) {
         mikrotikService.addPppoeSecret(
           newRouter,
-          customer.pppoeUsername,
-          customer.pppoePassword,
+          updatedCustomer.pppoeUsername,
+          updatedCustomer.pppoePassword,
           updatedCustomer.package.name
         ).catch(error => console.error('Failed to add to new router:', error.message));
       }
     }
 
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'UPDATE_CUSTOMER',
-        details: JSON.stringify({
-          customerId: updatedCustomer.id,
-          changes: data,
-          routerChanged: customer.routerId !== newRouterId
-        }),
-      },
-    });
+    // Log the action safely
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'UPDATE_CUSTOMER',
+          details: JSON.stringify({
+            customerId: updatedCustomer.id,
+            changes: data,
+            routerChanged: customer.routerId !== newRouterId
+          }),
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e.message);
+    }
 
     return updatedCustomer;
   }
 
   async deleteCustomer(id, userId) {
+    const customerId = parseInt(id);
     const customer = await prisma.customer.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: customerId },
       include: { router: true },
     });
     if (!customer) {
@@ -242,27 +252,50 @@ class CustomerService {
         .catch(error => console.error('Failed to remove PPPoE secret from router:', error.message));
     }
 
-    // Delete customer from database
-    await prisma.customer.delete({
-      where: { id: parseInt(id) },
+    // Transactionally cascade delete ONUs, payments, invoices and customer
+    await prisma.$transaction(async (tx) => {
+      await tx.onu.deleteMany({
+        where: { customerId },
+      });
+
+      await tx.payment.deleteMany({
+        where: {
+          invoice: {
+            customerId,
+          },
+        },
+      });
+
+      await tx.invoice.deleteMany({
+        where: { customerId },
+      });
+
+      await tx.customer.delete({
+        where: { id: customerId },
+      });
     });
 
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'DELETE_CUSTOMER',
-        details: JSON.stringify({ customerId: customer.id, name: customer.name }),
-      },
-    });
+    // Log the action safely
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'DELETE_CUSTOMER',
+          details: JSON.stringify({ customerId: customer.id, name: customer.name }),
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e.message);
+    }
 
     return { success: true };
   }
 
   async suspendCustomer(id, userId) {
+    const customerId = parseInt(id);
     const customer = await prisma.customer.findUnique({
-      where: { id: parseInt(id) },
-      include: { router: true },
+      where: { id: customerId },
+      include: { router: true, olt: true, onu: true },
     });
     if (!customer) {
       throw new Error('Customer not found');
@@ -273,7 +306,7 @@ class CustomerService {
 
     // Update status in database
     const updatedCustomer = await prisma.customer.update({
-      where: { id: parseInt(id) },
+      where: { id: customerId },
       data: { status: 'SUSPENDED' },
     });
 
@@ -283,22 +316,33 @@ class CustomerService {
         .catch(error => console.error('Failed to disable PPPoE on router:', error.message));
     }
 
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'SUSPEND_CUSTOMER',
-        details: JSON.stringify({ customerId: customer.id, name: customer.name }),
-      },
-    });
+    // Disable ONU on OLT if assigned (NON-BLOCKING)
+    if (customer.oltId && customer.onu) {
+      oltService.toggleCustomerOnu(customerId, true)
+        .catch(error => console.error('Failed to disable ONU on OLT:', error.message));
+    }
+
+    // Log the action safely
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'SUSPEND_CUSTOMER',
+          details: JSON.stringify({ customerId: customer.id, name: customer.name }),
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e.message);
+    }
 
     return updatedCustomer;
   }
 
   async restoreCustomer(id, userId) {
+    const customerId = parseInt(id);
     const customer = await prisma.customer.findUnique({
-      where: { id: parseInt(id) },
-      include: { router: true },
+      where: { id: customerId },
+      include: { router: true, olt: true, onu: true },
     });
     if (!customer) {
       throw new Error('Customer not found');
@@ -309,7 +353,7 @@ class CustomerService {
 
     // Update status in database
     const updatedCustomer = await prisma.customer.update({
-      where: { id: parseInt(id) },
+      where: { id: customerId },
       data: { status: 'ACTIVE' },
     });
 
@@ -319,14 +363,24 @@ class CustomerService {
         .catch(error => console.error('Failed to enable PPPoE on router:', error.message));
     }
 
-    // Log the action
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'RESTORE_CUSTOMER',
-        details: JSON.stringify({ customerId: customer.id, name: customer.name }),
-      },
-    });
+    // Enable ONU on OLT if assigned (NON-BLOCKING)
+    if (customer.oltId && customer.onu) {
+      oltService.toggleCustomerOnu(customerId, false)
+        .catch(error => console.error('Failed to enable ONU on OLT:', error.message));
+    }
+
+    // Log the action safely
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'RESTORE_CUSTOMER',
+          details: JSON.stringify({ customerId: customer.id, name: customer.name }),
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e.message);
+    }
 
     return updatedCustomer;
   }

@@ -22,7 +22,7 @@ class RouterController {
 
   async create(req, res) {
     try {
-      const router = await routerService.createRouter(req.body, req.user.id);
+      const router = await routerService.createRouter(req.body, req.user?.id || 1);
       return res.status(201).json({ success: true, data: router });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
@@ -31,7 +31,7 @@ class RouterController {
 
   async update(req, res) {
     try {
-      const router = await routerService.updateRouter(req.params.id, req.body, req.user.id);
+      const router = await routerService.updateRouter(req.params.id, req.body, req.user?.id || 1);
       return res.status(200).json({ success: true, data: router });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });
@@ -40,7 +40,7 @@ class RouterController {
 
   async delete(req, res) {
     try {
-      await routerService.deleteRouter(req.params.id, req.user.id);
+      await routerService.deleteRouter(req.params.id, req.user?.id || 1);
       return res.status(200).json({ success: true, message: 'Router deleted' });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message });

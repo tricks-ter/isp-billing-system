@@ -1,5 +1,6 @@
 // frontend/src/services/bkashApi.js
 import axios from 'axios';
+import api from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -19,21 +20,9 @@ export const bkashApi = {
   createPayment: (data) => publicApi.post('/bkash/create', data),
 
   // Private Endpoint: Generate/Fetch quick-pay public link for an invoice
-  generateQuickPayLink: (invoiceId) => {
-    const token = localStorage.getItem('token');
-    return axios.post(
-      `${API_URL}/bkash/generate-link/${invoiceId}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-  },
+  generateQuickPayLink: (invoiceId) => api.post(`/bkash/generate-link/${invoiceId}`),
 
   // Private Endpoint: Query bKash transaction status
-  queryPayment: (paymentId) => {
-    const token = localStorage.getItem('token');
-    return axios.get(`${API_URL}/bkash/query/${paymentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
+  queryPayment: (paymentId) => api.get(`/bkash/query/${paymentId}`),
 };
 

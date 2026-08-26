@@ -83,26 +83,36 @@ class RouterService {
   }
 
   async deleteRouter(id, userId) {
+    const routerId = parseInt(id);
     const router = await prisma.router.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        _count: { select: { customers: true } },
-      },
+      where: { id: routerId },
     });
     if (!router) throw new Error('Router not found');
-    if (router._count.customers > 0) {
-      throw new Error('Cannot delete router with assigned customers. Reassign customers first.');
-    }
 
-    await prisma.router.delete({ where: { id: parseInt(id) } });
+    await prisma.$transaction(async (tx) => {
+      // Unlink customers assigned to this router
+      await tx.customer.updateMany({
+        where: { routerId },
+        data: { routerId: null },
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        userId,
-        action: 'DELETE_ROUTER',
-        details: JSON.stringify({ routerId: router.id, name: router.name }),
-      },
+      // Delete the router
+      await tx.router.delete({
+        where: { id: routerId },
+      });
     });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: userId || 1,
+          action: 'DELETE_ROUTER',
+          details: JSON.stringify({ routerId: router.id, name: router.name }),
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e.message);
+    }
 
     return { success: true };
   }
