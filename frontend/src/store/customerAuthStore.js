@@ -12,6 +12,11 @@ const useCustomerAuthStore = create((set) => ({
     set({ customer: customerData, token, isAuthenticated: true });
   },
 
+  setCustomer: (customerData) => {
+    localStorage.setItem('isp_customer_user', JSON.stringify(customerData));
+    set({ customer: customerData });
+  },
+
   logout: () => {
     localStorage.removeItem('isp_customer_token');
     localStorage.removeItem('isp_customer_user');

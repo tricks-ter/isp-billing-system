@@ -1,10 +1,11 @@
-// frontend/src/components/customer/CustomerLayout.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import {
   LayoutDashboard, CreditCard, Receipt, LifeBuoy, Wifi,
   User, LogOut, Menu, X, ShieldCheck, Activity, Smartphone
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { customerPortalApi } from '../../services/customerPortalApi';
 import useCustomerAuthStore from '../../store/customerAuthStore';
 import toast from 'react-hot-toast';
 
@@ -19,8 +20,22 @@ const customerNavItems = [
 
 export default function CustomerLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { customer, logout } = useCustomerAuthStore();
+  const { customer, logout, setCustomer } = useCustomerAuthStore();
   const navigate = useNavigate();
+
+  const { data: dashboardData } = useQuery({
+    queryKey: ['customerDashboard'],
+    queryFn: () => customerPortalApi.getDashboard().then(res => res.data.data),
+    refetchInterval: 5000,
+  });
+
+  const currentCustomer = dashboardData?.customer || customer;
+
+  useEffect(() => {
+    if (dashboardData?.customer) {
+      setCustomer(dashboardData.customer);
+    }
+  }, [dashboardData?.customer, setCustomer]);
 
   const handleLogout = () => {
     logout();
@@ -28,7 +43,7 @@ export default function CustomerLayout() {
     navigate('/login?tab=customer');
   };
 
-  const isSuspended = customer?.status === 'SUSPENDED';
+  const isSuspended = currentCustomer?.status === 'SUSPENDED';
 
   return (
     <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col font-sans antialiased selection:bg-[#E2136E] selection:text-white w-full max-w-full overflow-x-hidden">
@@ -76,16 +91,16 @@ export default function CustomerLayout() {
             <div className="hidden sm:flex items-center space-x-2.5 flex-shrink-0">
               <div className="flex items-center space-x-2 bg-slate-800/60 border border-slate-700/60 py-1.5 px-2.5 rounded-xl">
                 <div className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
-                  {customer?.name?.charAt(0) || 'U'}
+                  {currentCustomer?.name?.charAt(0) || 'U'}
                 </div>
                 <div className="text-left">
                   <div className="flex items-center space-x-1">
                     <span className="text-xs font-bold text-white max-w-[100px] truncate">
-                      {customer?.name || 'Subscriber'}
+                      {currentCustomer?.name || 'Subscriber'}
                     </span>
                     <span className={`w-1.5 h-1.5 rounded-full ${isSuspended ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
                   </div>
-                  <p className="text-[9px] text-slate-400 font-mono leading-none">@{customer?.pppoeUsername}</p>
+                  <p className="text-[9px] text-slate-400 font-mono leading-none">@{currentCustomer?.pppoeUsername}</p>
                 </div>
               </div>
 
@@ -116,17 +131,17 @@ export default function CustomerLayout() {
             <div className="p-3 bg-slate-800/70 border border-slate-700/50 rounded-xl mb-3 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">
-                  {customer?.name?.charAt(0) || 'U'}
+                  {currentCustomer?.name?.charAt(0) || 'U'}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-white">{customer?.name}</p>
-                  <p className="text-[10px] text-slate-400 font-mono">@{customer?.pppoeUsername}</p>
+                  <p className="text-xs font-bold text-white">{currentCustomer?.name}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">@{currentCustomer?.pppoeUsername}</p>
                 </div>
               </div>
               <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
                 isSuspended ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
               }`}>
-                {customer?.status || 'ACTIVE'}
+                {currentCustomer?.status || 'ACTIVE'}
               </span>
             </div>
 
