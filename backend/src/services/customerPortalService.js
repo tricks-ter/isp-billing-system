@@ -176,16 +176,29 @@ class CustomerPortalService {
     }
 
     // 3. Billing & Invoices Calculation
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
     let totalDue = 0;
     let totalPaid = 0;
+    let advanceTotal = 0;
     const unpaidInvoices = [];
 
     customer.invoices.forEach(inv => {
       const paid = inv.payments.reduce((sum, p) => sum + p.amount, 0);
       const due = Math.max(0, inv.total - paid);
       totalPaid += paid;
+
+      const isFutureMonth = inv.month > currentMonth;
+      if (isFutureMonth) {
+        if (inv.status === 'PAID') advanceTotal += paid;
+      } else {
+        if (due > 0 || inv.status !== 'PAID') {
+          totalDue += due;
+        }
+      }
+
       if (due > 0 || inv.status !== 'PAID') {
-        totalDue += due;
         unpaidInvoices.push({
           id: inv.id,
           month: inv.month,
@@ -194,6 +207,7 @@ class CustomerPortalService {
           dueAmount: due,
           dueDate: inv.dueDate,
           status: inv.status,
+          isAdvance: isFutureMonth,
           publicToken: inv.publicToken,
         });
       }
@@ -208,6 +222,8 @@ class CustomerPortalService {
         area: customer.area,
         pppoeUsername: customer.pppoeUsername,
         status: customer.status,
+        collectionNote: customer.collectionNote,
+        promisedPayDate: customer.promisedPayDate,
         joinDate: customer.joinDate,
         expireDate: customer.expireDate,
         package: customer.package,
@@ -217,16 +233,9 @@ class CustomerPortalService {
       billing: {
         totalDue,
         totalPaid,
+        advanceTotal,
+        currentMonth,
         unpaidInvoices,
-        recentInvoices: customer.invoices.slice(0, 5).map(inv => ({
-          id: inv.id,
-          month: inv.month,
-          total: inv.total,
-          paidAmount: inv.payments.reduce((sum, p) => sum + p.amount, 0),
-          status: inv.status,
-          dueDate: inv.dueDate,
-          publicToken: inv.publicToken,
-        })),
       },
       recentTickets: customer.tickets,
     };
@@ -237,21 +246,26 @@ class CustomerPortalService {
    */
   async getInvoices(customerId) {
     const id = parseInt(customerId);
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
     const invoices = await prisma.invoice.findMany({
       where: { customerId: id },
       include: {
         payments: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { month: 'desc' },
     });
 
     return invoices.map(inv => {
       const paidAmount = inv.payments.reduce((sum, p) => sum + p.amount, 0);
       const dueAmount = Math.max(0, inv.total - paidAmount);
+      const isAdvance = inv.month > currentMonth;
       return {
         ...inv,
         paidAmount,
         dueAmount,
+        isAdvance,
       };
     });
   }

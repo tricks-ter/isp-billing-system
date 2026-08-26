@@ -393,6 +393,169 @@ class CustomerService {
 
     return updatedCustomer;
   }
+
+  /**
+   * Comprehensive Collection & Revenue Intelligence Summary
+   */
+  async getCollectionSummary() {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const customers = await prisma.customer.findMany({
+      include: {
+        package: true,
+        router: true,
+        invoices: {
+          include: { payments: true },
+          orderBy: { month: 'desc' },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    let totalCustomers = customers.length;
+    let expectedMonthlyRevenue = 0;
+    let actualCollectedRevenue = 0;
+    let totalOutstandingDue = 0;
+
+    const paidCustomerList = [];
+    const dueCustomerList = [];
+    const advancePaidCustomerList = [];
+
+    customers.forEach(cust => {
+      const pkgPrice = cust.package ? cust.package.price : 0;
+      if (cust.status === 'ACTIVE') {
+        expectedMonthlyRevenue += pkgPrice;
+      }
+
+      let customerCurrentDue = 0;
+      let customerTotalPaidThisMonth = 0;
+      let isPaidCurrentMonth = false;
+      let hasAdvancePaid = false;
+
+      cust.invoices.forEach(inv => {
+        const paidForInv = inv.payments.reduce((s, p) => s + p.amount, 0);
+        const invDue = Math.max(0, inv.total - paidForInv);
+
+        inv.payments.forEach(p => {
+          const pDate = new Date(p.date || p.createdAt);
+          const pMonth = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}`;
+          if (pMonth === currentMonth) {
+            actualCollectedRevenue += p.amount;
+            customerTotalPaidThisMonth += p.amount;
+          }
+        });
+
+        if (inv.month === currentMonth) {
+          if (inv.status === 'PAID' || invDue === 0) {
+            isPaidCurrentMonth = true;
+          } else {
+            customerCurrentDue += invDue;
+          }
+        } else if (inv.month < currentMonth) {
+          if (invDue > 0) {
+            customerCurrentDue += invDue;
+          }
+        } else if (inv.month > currentMonth) {
+          if (inv.status === 'PAID' || paidForInv > 0) {
+            hasAdvancePaid = true;
+          }
+        }
+      });
+
+      totalOutstandingDue += customerCurrentDue;
+
+      const customerSummary = {
+        id: cust.id,
+        name: cust.name,
+        phone: cust.phone,
+        area: cust.area || 'N/A',
+        pppoeUsername: cust.pppoeUsername,
+        packageName: cust.package?.name || 'N/A',
+        packagePrice: pkgPrice,
+        status: cust.status,
+        dueAmount: customerCurrentDue,
+        paidThisMonth: customerTotalPaidThisMonth,
+        collectionNote: cust.collectionNote,
+        promisedPayDate: cust.promisedPayDate,
+        notesUpdatedAt: cust.notesUpdatedAt,
+      };
+
+      if (customerCurrentDue > 0) {
+        dueCustomerList.push(customerSummary);
+      } else {
+        paidCustomerList.push(customerSummary);
+      }
+
+      if (hasAdvancePaid) {
+        advancePaidCustomerList.push(customerSummary);
+      }
+    });
+
+    const collectionEfficiency = expectedMonthlyRevenue > 0
+      ? Math.min(100, Math.round((actualCollectedRevenue / expectedMonthlyRevenue) * 100))
+      : 100;
+
+    return {
+      currentMonth,
+      totalCustomers,
+      paidCount: paidCustomerList.length,
+      dueCount: dueCustomerList.length,
+      advanceCount: advancePaidCustomerList.length,
+      expectedMonthlyRevenue,
+      actualCollectedRevenue,
+      totalOutstandingDue,
+      collectionEfficiency,
+      lists: {
+        all: customers.map(c => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          pppoeUsername: c.pppoeUsername,
+          packageName: c.package?.name || 'N/A',
+          packagePrice: c.package?.price || 0,
+          status: c.status,
+          collectionNote: c.collectionNote,
+          promisedPayDate: c.promisedPayDate,
+        })),
+        paid: paidCustomerList,
+        due: dueCustomerList,
+        advance: advancePaidCustomerList,
+      },
+    };
+  }
+
+  /**
+   * Update Payment Collection Note & Promised Pay Date
+   */
+  async updateCollectionNote(customerId, { collectionNote, promisedPayDate }, actingUserId = 1) {
+    const id = parseInt(customerId);
+    const updated = await prisma.customer.update({
+      where: { id },
+      data: {
+        collectionNote: collectionNote !== undefined ? collectionNote : undefined,
+        promisedPayDate: promisedPayDate ? new Date(promisedPayDate) : null,
+        notesUpdatedAt: new Date(),
+      },
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: actingUserId,
+          action: 'UPDATE_COLLECTION_NOTE',
+          details: JSON.stringify({
+            customerId: id,
+            customerName: updated.name,
+            note: collectionNote,
+            promisedPayDate,
+          }),
+        },
+      });
+    } catch (_) {}
+
+    return updated;
+  }
 }
 
 module.exports = new CustomerService();

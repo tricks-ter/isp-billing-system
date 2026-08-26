@@ -62,9 +62,16 @@ export default function CustomerInvoicesPage() {
     setTimeout(() => window.print(), 200);
   };
 
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const currentOrPastInvoices = invoices?.filter(i => i.month <= currentMonth) || [];
+  const futureAdvanceInvoices = invoices?.filter(i => i.month > currentMonth) || [];
+
   const totalBilled = invoices?.reduce((sum, i) => sum + i.total, 0) || 0;
   const totalPaid = invoices?.reduce((sum, i) => sum + i.paidAmount, 0) || 0;
-  const totalDue = Math.max(0, totalBilled - totalPaid);
+  const currentMonthDue = currentOrPastInvoices.reduce((sum, i) => sum + i.dueAmount, 0);
+  const advancePaid = futureAdvanceInvoices.reduce((sum, i) => sum + i.paidAmount, 0);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -101,9 +108,9 @@ export default function CustomerInvoicesPage() {
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Current Due</span>
-          <span className={`text-2xl font-black ${totalDue > 0 ? 'text-pink-400' : 'text-slate-300'}`}>
-            ৳{totalDue.toLocaleString()}
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Current Month Due</span>
+          <span className={`text-2xl font-black ${currentMonthDue > 0 ? 'text-pink-400' : 'text-emerald-400'}`}>
+            ৳{currentMonthDue.toLocaleString()} {currentMonthDue === 0 && <span className="text-xs font-bold text-emerald-500">(All Clear)</span>}
           </span>
         </div>
       </div>
@@ -140,11 +147,21 @@ export default function CustomerInvoicesPage() {
                 {invoices.map((inv) => {
                   const isPaid = inv.status === 'PAID';
                   const isPaying = isPayingId === inv.id;
+                  const isAdvance = inv.month > currentMonth;
 
                   return (
                     <tr key={inv.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="py-4 pr-4 font-mono font-bold text-slate-300">INV-#{inv.id}</td>
-                      <td className="py-4 pr-4 font-bold text-white text-sm">{inv.month}</td>
+                      <td className="py-4 pr-4 font-bold text-white text-sm">
+                        <div className="flex items-center space-x-2">
+                          <span>{inv.month}</span>
+                          {isAdvance && (
+                            <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded">
+                              Advance
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-4 pr-4 text-slate-200">৳{inv.total}</td>
                       <td className="py-4 pr-4 text-emerald-400 font-semibold">৳{inv.paidAmount}</td>
                       <td className="py-4 pr-4 text-pink-400 font-semibold">৳{inv.dueAmount}</td>
@@ -153,9 +170,9 @@ export default function CustomerInvoicesPage() {
                         <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${
                           isPaid
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                            : (isAdvance ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30')
                         }`}>
-                          {inv.status}
+                          {inv.status === 'PAID' ? 'PAID' : (isAdvance ? 'ADVANCE' : 'UNPAID')}
                         </span>
                       </td>
                       <td className="py-4 text-right">

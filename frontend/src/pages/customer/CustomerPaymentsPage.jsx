@@ -5,6 +5,7 @@ import {
   Receipt, Smartphone, Wallet, Building2, CheckCircle2,
   Printer, Loader2, Calendar, ShieldCheck
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function CustomerPaymentsPage() {
   const { data: payments, isLoading } = useQuery({
@@ -100,8 +101,26 @@ export default function CustomerPaymentsPage() {
                     <td className="py-4 pr-4">
                       {getMethodBadge(p.method)}
                     </td>
-                    <td className="py-4 pr-4 font-mono text-slate-400">
-                      {p.trxId || p.gatewayPaymentId || 'Cash Settlement'}
+                    <td className="py-4 pr-4 font-mono">
+                      {p.trxId ? (
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-pink-400 font-bold bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20 select-all">
+                            {p.trxId}
+                          </span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(p.trxId);
+                              toast.success(`Copied TrxID: ${p.trxId}`);
+                            }}
+                            className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded cursor-pointer"
+                            title="Copy TrxID"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-slate-500">{p.gatewayPaymentId || 'Cash Settlement'}</span>
+                      )}
                     </td>
                     <td className="py-4 text-right">
                       <span className="inline-flex items-center space-x-1 text-emerald-400 font-medium">

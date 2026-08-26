@@ -76,6 +76,32 @@ class CustomerController {
       return res.status(400).json({ success: false, message: error.message });
     }
   }
+
+  async getCollectionSummary(req, res) {
+    try {
+      const summary = await customerService.getCollectionSummary();
+      return res.status(200).json({ success: true, data: summary });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async updateCollectionNote(req, res) {
+    try {
+      const updated = await customerService.updateCollectionNote(
+        req.params.id,
+        req.body,
+        req.user?.id || 1
+      );
+      return res.status(200).json({
+        success: true,
+        data: updated,
+        message: 'Payment collection note saved successfully',
+      });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
 }
 
 module.exports = new CustomerController();

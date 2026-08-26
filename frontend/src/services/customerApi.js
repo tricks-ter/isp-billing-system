@@ -19,4 +19,8 @@ export const customerApi = {
   suspend: (id) => api.post(`/customers/${id}/suspend`),
 
   restore: (id) => api.post(`/customers/${id}/restore`),
+
+  getCollectionSummary: () => api.get('/customers/collection-summary'),
+
+  updateCollectionNote: (id, data) => api.put(`/customers/${id}/collection-note`, data),
 };

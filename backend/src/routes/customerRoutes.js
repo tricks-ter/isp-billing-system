@@ -7,6 +7,12 @@ const roleMiddleware = require('../middleware/roleMiddleware');
 // All routes require authentication
 router.use(authMiddleware);
 
+// GET /api/customers/collection-summary - Real-time Collection & Revenue Intelligence Summary
+router.get('/collection-summary', customerController.getCollectionSummary);
+
+// PUT /api/customers/:id/collection-note - Update customer payment collection note & promised date
+router.put('/:id/collection-note', customerController.updateCollectionNote);
+
 // GET /api/customers - List all customers (with pagination and search)
 router.get('/', customerController.getAll);
 

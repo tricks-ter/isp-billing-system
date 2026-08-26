@@ -51,6 +51,9 @@ model Customer {
   fiberCore     String?
   invoices      Invoice[]
   tickets       SupportTicket[]
+  collectionNote String?
+  promisedPayDate DateTime?
+  notesUpdatedAt DateTime?
   joinDate      DateTime  @default(now())
   expireDate    DateTime?
   createdAt     DateTime  @default(now())
