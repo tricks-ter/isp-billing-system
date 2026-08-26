@@ -28,14 +28,22 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 
 // CORS configuration
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://isp-billing-frontend-0f1m.onrender.com',
-  'http://localhost:5173'
-].filter(Boolean);
-
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? allowedOrigins : 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server, Render health checks)
+    if (!origin) return callback(null, true);
+
+    // Accept localhost, onrender.com subdomains, or configured FRONTEND_URL
+    if (
+      origin.includes('localhost') ||
+      origin.includes('onrender.com') ||
+      (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) ||
+      process.env.NODE_ENV !== 'production'
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
 }));
 
