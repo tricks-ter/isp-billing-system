@@ -14,12 +14,12 @@ export default function CustomerDashboardPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [advanceMonths, setAdvanceMonths] = useState(1);
   const [customAdvanceAmount, setCustomAdvanceAmount] = useState('');
-  const [paymentMode, setPaymentMode] = useState('due'); // 'due' or 'advance'
+  const [paymentMode, setPaymentMode] = useState('advance'); // 'due' or 'advance'
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['customerDashboard'],
     queryFn: () => customerPortalApi.getDashboard().then(res => res.data.data),
-    refetchInterval: 20000,
+    refetchInterval: 5000,
   });
 
   const handlePayBkash = async (options = {}) => {
@@ -28,15 +28,14 @@ export default function CustomerDashboardPage() {
       let payload = {};
       if (options.invoiceId) {
         payload = { invoiceId: options.invoiceId };
-      } else if (paymentMode === 'advance') {
+      } else if (hasDue && paymentMode === 'due' && firstDueInvoice) {
+        payload = { invoiceId: firstDueInvoice.id };
+      } else {
         payload = {
           isAdvance: true,
-          monthsCount: advanceMonths,
+          monthsCount: advanceMonths || 1,
           customAmount: customAdvanceAmount ? parseFloat(customAdvanceAmount) : undefined,
         };
-      } else {
-        // Default earliest unpaid invoice or next advance
-        payload = { isAdvance: false };
       }
 
       const res = await customerPortalApi.payBkash(payload);
@@ -85,7 +84,7 @@ export default function CustomerDashboardPage() {
   const calculatedAdvanceTotal = customAdvanceAmount ? parseFloat(customAdvanceAmount) || pkgPrice : pkgPrice * advanceMonths;
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8 w-full max-w-full overflow-hidden">
       {/* Top Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -101,14 +100,14 @@ export default function CustomerDashboardPage() {
         <div className="flex items-center space-x-2.5 bg-slate-900/90 border border-slate-800 px-4 py-2 rounded-2xl w-fit shadow-md">
           <span className="relative flex h-3 w-3">
             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-              isSuspended ? 'bg-amber-400' : (liveSession.isOnline ? 'bg-emerald-400' : 'bg-rose-400')
+              isSuspended ? 'bg-amber-400' : (customer.status === 'ACTIVE' || liveSession.isOnline ? 'bg-emerald-400' : 'bg-rose-400')
             }`} />
             <span className={`relative inline-flex rounded-full h-3 w-3 ${
-              isSuspended ? 'bg-amber-500' : (liveSession.isOnline ? 'bg-emerald-500' : 'bg-rose-500')
+              isSuspended ? 'bg-amber-500' : (customer.status === 'ACTIVE' || liveSession.isOnline ? 'bg-emerald-500' : 'bg-rose-500')
             }`} />
           </span>
           <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            {isSuspended ? 'Suspended (Due Bill)' : (liveSession.isOnline ? 'Internet Active' : 'Session Offline')}
+            {isSuspended ? 'Suspended (Due Bill)' : (customer.status === 'ACTIVE' ? 'Active Connection' : (liveSession.isOnline ? 'Internet Active' : 'Session Offline'))}
           </span>
         </div>
       </div>

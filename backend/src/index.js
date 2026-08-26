@@ -19,6 +19,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const oltRoutes = require('./routes/oltRoutes');
 const bkashRoutes = require('./routes/bkashRoutes');
 const customerPortalRoutes = require('./routes/customerPortalRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -57,6 +58,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/olts', oltRoutes);
 app.use('/api/bkash', bkashRoutes);
 app.use('/api/customer-portal', customerPortalRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 // --- Health Check ---
 app.get('/api/health', (req, res) => {

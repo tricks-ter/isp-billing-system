@@ -3,10 +3,11 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CreditCard, Wifi, Receipt,
   BarChart3, Settings, LogOut, Menu, X, Bell, Server, Zap,
-  Wallet, Shield, Activity, Layers
+  Wallet, Shield, Activity, Layers, LifeBuoy
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { notificationApi } from '../services/notificationApi';
+import { ticketApi } from '../services/ticketApi';
 import useAuthStore from '../store/authStore';
 import ThemeToggle from './ThemeToggle';
 import toast from 'react-hot-toast';
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/packages', icon: Wifi, label: 'Packages', section: 'main' },
   { to: '/billing', icon: CreditCard, label: 'Billing', section: 'main' },
   { to: '/payments', icon: Receipt, label: 'Payments', section: 'main' },
+  { to: '/tickets', icon: LifeBuoy, label: 'Support Tickets', section: 'main' },
   { to: '/routers', icon: Server, label: 'Routers', section: 'network' },
   { to: '/olts', icon: Layers, label: 'OLTs', section: 'network' },
   { to: '/live-status', icon: Zap, label: 'Live Status', section: 'network' },
@@ -36,7 +38,13 @@ export default function Layout() {
   const { data: notifData } = useQuery({
     queryKey: ['unreadNotifs'],
     queryFn: () => notificationApi.getUnreadCount().then(res => res.data.data),
-    refetchInterval: 30000,
+    refetchInterval: 15000,
+  });
+
+  const { data: ticketStats } = useQuery({
+    queryKey: ['adminTicketStatsNav'],
+    queryFn: () => ticketApi.getStats().then(res => res.data.data),
+    refetchInterval: 10000,
   });
 
   const handleLogout = () => {
@@ -79,23 +87,35 @@ export default function Layout() {
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Main Menu</p>
-          {navItems.filter((i) => i.section === 'main').map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
-                ${isActive
-                  ? 'bg-primary text-white shadow-sm shadow-primary/20'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
-                }`
-              }
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+          {navItems.filter((i) => i.section === 'main').map((item) => {
+            const isTicket = item.to === '/tickets';
+            const openCount = ticketStats?.open || 0;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group
+                  ${isActive
+                    ? 'bg-primary text-white shadow-sm shadow-primary/20'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
+                  }`
+                }
+              >
+                <div className="flex items-center space-x-3">
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+                {isTicket && openCount > 0 && (
+                  <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-500 text-white shadow-sm">
+                    {openCount}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
 
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 mt-4">Network</p>
           {navItems.filter((i) => i.section === 'network').map((item) => (

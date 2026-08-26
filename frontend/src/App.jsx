@@ -23,6 +23,7 @@ import UsersPage from './pages/UsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import SettingsPage from './pages/SettingsPage';
 import NotificationsPage from './pages/NotificationsPage';
+import TicketsPage from './pages/TicketsPage';
 
 // Public Payment Pages
 import CustomerQuickPayPage from './pages/CustomerQuickPayPage';
@@ -89,6 +90,7 @@ function App() {
               <Route path="/packages" element={<PackagesPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
+              <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/routers" element={<RoutersPage />} />
               <Route path="/routers/:id" element={<RouterDetailPage />} />
               <Route path="/olts" element={<OltsPage />} />
