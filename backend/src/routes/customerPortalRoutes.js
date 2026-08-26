@@ -18,6 +18,6 @@ router.post('/tickets', customerPortalController.createTicket);
 router.get('/packages', customerPortalController.getPackages);
 router.put('/profile', customerPortalController.updateProfile);
 router.post('/pay/bkash', customerPortalController.initiateBkashPayment);
+router.post('/payments/initiate', customerPortalController.initiateBkashPayment);
 
 module.exports = router;
-

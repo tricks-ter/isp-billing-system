@@ -38,8 +38,17 @@ export const customerPortalApi = {
   getPayments: () => customerApi.get('/payments'),
   getTickets: () => customerApi.get('/tickets'),
   createTicket: (data) => customerApi.post('/tickets', data),
+  getPackages: () => customerApi.get('/packages'),
   getAvailablePackages: () => customerApi.get('/packages'),
-  initiatePayment: (data) => customerApi.post('/payments/initiate', data),
+  updateProfile: (data) => customerApi.put('/profile', data),
+  payBkash: (payload) => {
+    const data = typeof payload === 'object' ? payload : { invoiceId: payload };
+    return customerApi.post('/pay/bkash', data);
+  },
+  initiatePayment: (payload) => {
+    const data = typeof payload === 'object' ? payload : { invoiceId: payload };
+    return customerApi.post('/pay/bkash', data);
+  },
   queryPayment: (paymentId) => customerApi.get(`/payments/query/${paymentId}`),
 };
 
