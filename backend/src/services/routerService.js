@@ -389,6 +389,12 @@ class RouterService {
     if (!router) throw new Error('Router not found');
     return mikrotikService.getSimpleQueues(router);
   }
+
+  async executeCliCommand(routerId, command) {
+    const router = await prisma.router.findUnique({ where: { id: parseInt(routerId) } });
+    if (!router) throw new Error('Router not found');
+    return mikrotikService.executeCliCommand(router, command);
+  }
 }
 
 module.exports = new RouterService();

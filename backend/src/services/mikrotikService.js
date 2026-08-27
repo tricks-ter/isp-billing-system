@@ -599,6 +599,71 @@ class MikroTikService {
     const data = filtered.slice(start, start + limit);
     return { data, total };
   }
+
+  async executeCliCommand(router, commandStr) {
+    const raw = (commandStr || '').trim();
+    if (!raw) throw new Error('Command cannot be empty');
+
+    if (this.mockMode) {
+      const lower = raw.toLowerCase().replace(/^\/+/, '');
+      if (lower.includes('resource') && lower.includes('print')) {
+        return [
+          {
+            uptime: '14w3d12h45m',
+            version: '7.15.2 (stable)',
+            'free-memory': '241.5MiB',
+            'total-memory': '256.0MiB',
+            cpu: 'MIPS 1004Kc V2.15',
+            'cpu-count': '2',
+            'cpu-frequency': '880MHz',
+            'cpu-load': '4%',
+            'free-hdd-space': '14.2MiB',
+            'total-hdd-space': '16.0MiB',
+            'board-name': `${router.name || 'MikroTik'} [MOCK SIMULATOR]`,
+          },
+        ];
+      } else if (lower.includes('ip') && lower.includes('address') && lower.includes('print')) {
+        return [
+          { '.id': '*1', address: '103.145.112.54/29', network: '103.145.112.48', interface: 'ether1-WAN', comment: 'WAN Upstream' },
+          { '.id': '*2', address: '192.168.88.1/24', network: '192.168.88.0', interface: 'bridge-LAN', comment: 'Local Gateway' },
+          { '.id': '*3', address: '10.10.0.1/24', network: '10.10.0.0', interface: 'pppoe-pool', comment: 'PPPoE Client Subnet' },
+        ];
+      } else if (lower.includes('interface') && lower.includes('print')) {
+        return [
+          { '.id': '*1', name: 'ether1-WAN', type: 'ether', mtu: '1500', macAddress: 'DC:2C:6E:11:22:33', running: 'true', disabled: 'false' },
+          { '.id': '*2', name: 'ether2-LAN', type: 'ether', mtu: '1500', macAddress: 'DC:2C:6E:11:22:34', running: 'true', disabled: 'false' },
+          { '.id': '*3', name: 'ether3-OLT-Uplink', type: 'ether', mtu: '1500', macAddress: 'DC:2C:6E:11:22:35', running: 'true', disabled: 'false' },
+          { '.id': '*4', name: 'bridge-LAN', type: 'bridge', mtu: '1500', macAddress: 'DC:2C:6E:11:22:34', running: 'true', disabled: 'false' },
+        ];
+      } else if (lower.includes('ppp') && lower.includes('secret')) {
+        return await this.getPppoeSecrets(router);
+      } else if (lower.includes('ppp') && lower.includes('active')) {
+        return await this.getActiveSessions(router);
+      } else if (lower.includes('queue')) {
+        return await this.getSimpleQueues(router);
+      } else if (lower.includes('ping')) {
+        return [
+          { host: '8.8.8.8', size: 56, ttl: 118, time: '14ms', status: 'echo reply' },
+          { host: '8.8.8.8', size: 56, ttl: 118, time: '12ms', status: 'echo reply' },
+          { host: '8.8.8.8', size: 56, ttl: 118, time: '15ms', status: 'echo reply' },
+          { host: '8.8.8.8', size: 56, ttl: 118, time: '13ms', status: 'echo reply' },
+        ];
+      } else {
+        return [
+          { status: 'success', message: `Mock execution of '${raw}' completed with code 0.` },
+        ];
+      }
+    }
+
+    try {
+      const api = await this.connectToRouter(router);
+      const cmd = raw.startsWith('/') ? raw : `/${raw}`;
+      const result = await api.write(cmd);
+      return result;
+    } catch (error) {
+      throw new Error(`RouterOS command failed: ${error.message}`);
+    }
+  }
 }
 
 const mikrotikService = new MikroTikService();

@@ -6,12 +6,14 @@ import {
   Server, Info, Users, Activity, Layers, BarChart3,
   RefreshCw, Plus, Edit, Trash2, Loader2,
   AlertCircle, Search, X, Power, PowerOff, LogOut,
-  AlertTriangle
+  AlertTriangle, Terminal, Play, Cloud, Copy, Check
 } from 'lucide-react';
 import { routerApi } from '../services/routerApi';
+import { settingsApi } from '../services/settingsApi';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
+import OracleSetupModal from '../components/OracleSetupModal';
 import toast from 'react-hot-toast';
 
 // Helper to format bytes
@@ -31,6 +33,31 @@ export default function RouterDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('info');
+  const [isOracleModalOpen, setIsOracleModalOpen] = useState(false);
+
+  // CLI Terminal state
+  const [cliCommand, setCliCommand] = useState('/system/resource/print');
+  const [cliHistory, setCliHistory] = useState([
+    {
+      timestamp: new Date().toLocaleTimeString(),
+      command: '/system/resource/print',
+      output: [
+        {
+          uptime: '14w3d12h45m',
+          version: '7.15.2 (stable)',
+          'free-memory': '241.5MiB',
+          'total-memory': '256.0MiB',
+          cpu: 'MIPS 1004Kc V2.15',
+          'cpu-count': '2',
+          'cpu-frequency': '880MHz',
+          'cpu-load': '4%',
+          'board-name': 'MikroTik RouterOS',
+        },
+      ],
+      isSuccess: true,
+    },
+  ]);
+  const [isCliRunning, setIsCliRunning] = useState(false);
 
   // PPPoE state
   const [isPppoeFormOpen, setIsPppoeFormOpen] = useState(false);
@@ -736,20 +763,142 @@ export default function RouterDetailPage() {
     );
   };
 
-  // --- Main render ---
+  const handleRunCommand = async (cmdToRun) => {
+    const targetCmd = cmdToRun || cliCommand;
+    if (!targetCmd.trim()) return;
+
+    setIsCliRunning(true);
+    try {
+      const res = await routerApi.executeCliCommand(id, targetCmd);
+      const data = res.data.data;
+      setCliHistory(prev => [
+        ...prev,
+        {
+          timestamp: new Date().toLocaleTimeString(),
+          command: targetCmd,
+          output: data,
+          isSuccess: true,
+        }
+      ]);
+      setCliCommand('');
+    } catch (error) {
+      setCliHistory(prev => [
+        ...prev,
+        {
+          timestamp: new Date().toLocaleTimeString(),
+          command: targetCmd,
+          output: error.response?.data?.message || error.message || 'Execution failed',
+          isSuccess: false,
+        }
+      ]);
+    } finally {
+      setIsCliRunning(false);
+    }
+  };
+
+  const renderTerminalTab = () => {
+    return (
+      <div className="space-y-4">
+        {/* Terminal Header & Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 text-slate-200 p-4 rounded-2xl border border-slate-800">
+          <div className="flex items-center space-x-2.5">
+            <Terminal className="w-5 h-5 text-emerald-400" />
+            <span className="font-mono font-bold text-sm">RouterOS Interactive CLI Console</span>
+            <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold ${isMockMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
+              {isMockMode ? 'MOCK SIMULATOR' : 'LIVE HARDWARE API'}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCliHistory([])}
+              className="text-xs text-slate-400 hover:text-slate-200 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition font-mono cursor-pointer"
+            >
+              Clear Screen
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Command Chips */}
+        <div className="flex flex-wrap gap-2 text-xs items-center">
+          <span className="text-slate-400 text-xs font-mono">Quick Run:</span>
+          {[
+            '/system/resource/print',
+            '/interface/print',
+            '/ip/address/print',
+            '/ppp/secret/print',
+            '/ppp/active/print',
+            '/queue/simple/print',
+            '/ping 8.8.8.8 count=4'
+          ].map((cmd) => (
+            <button
+              key={cmd}
+              onClick={() => handleRunCommand(cmd)}
+              disabled={isCliRunning}
+              className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-mono text-[11px] border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+            >
+              {cmd}
+            </button>
+          ))}
+        </div>
+
+        {/* Terminal Screen */}
+        <div className="bg-slate-950 text-slate-100 p-4 rounded-2xl font-mono text-xs border border-slate-800 shadow-inner min-h-[380px] max-h-[520px] overflow-y-auto space-y-4">
+          <div className="text-slate-500 text-[11px] space-y-0.5">
+            <div>MikroTik RouterOS 7.15.2 Interactive Shell</div>
+            <div>Connected to: {router.name} ({router.ipAddress}:{router.apiPort})</div>
+            <div>--------------------------------------------------------------------------------</div>
+          </div>
+
+          {cliHistory.map((item, idx) => (
+            <div key={idx} className="space-y-1.5 border-b border-slate-900 pb-3">
+              <div className="flex items-center space-x-2 text-emerald-400 font-bold">
+                <span>[{router.username}@{router.name}] &gt;</span>
+                <span className="text-slate-100">{item.command}</span>
+                <span className="text-[10px] text-slate-600 font-normal">({item.timestamp})</span>
+              </div>
+              <pre className={`whitespace-pre-wrap overflow-x-auto p-3 rounded-xl border leading-relaxed text-[11px] ${item.isSuccess ? 'bg-slate-900/80 text-emerald-300 border-slate-800/80' : 'bg-rose-950/40 text-rose-300 border-rose-900/50'}`}>
+                {typeof item.output === 'string' ? item.output : JSON.stringify(item.output, null, 2)}
+              </pre>
+            </div>
+          ))}
+
+          {isCliRunning && (
+            <div className="flex items-center space-x-2 text-amber-400 font-bold animate-pulse">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Executing command on RouterOS...</span>
+            </div>
+          )}
+        </div>
+
+        {/* Input Bar */}
+        <form onSubmit={(e) => { e.preventDefault(); handleRunCommand(); }} className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3.5 top-2.5 font-mono text-emerald-500 font-bold text-sm">&gt;</span>
+            <input
+              type="text"
+              value={cliCommand}
+              onChange={(e) => setCliCommand(e.target.value)}
+              placeholder="Enter RouterOS command (e.g. /system/resource/print)"
+              className="w-full pl-8 pr-4 py-2.5 bg-slate-900 text-slate-100 border border-slate-800 rounded-xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              disabled={isCliRunning}
+            />
+          </div>
+          <Button type="submit" isLoading={isCliRunning} className="cursor-pointer bg-emerald-600 hover:bg-emerald-700">
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Execute</span>
+          </Button>
+        </form>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <button
-            onClick={() => navigate('/routers')}
-            className="text-sm text-primary hover:underline mb-1"
-          >
-            ← Back to Routers
-          </button>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center space-x-3">
-            <Server className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-3">
             <span>{router.name}</span>
             <Badge variant={router.isActive ? 'success' : 'danger'}>
               {router.isActive ? 'Active' : 'Inactive'}
@@ -759,27 +908,38 @@ export default function RouterDetailPage() {
             {router.ipAddress}:{router.apiPort}
           </p>
         </div>
-        <Button variant="outline" onClick={handleRefresh}>
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh All</span>
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsOracleModalOpen(true)}
+            className="cursor-pointer border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+          >
+            <Cloud className="w-4 h-4 text-amber-500" />
+            <span>Oracle Cloud Guide</span>
+          </Button>
+          <Button variant="outline" onClick={handleRefresh} className="cursor-pointer">
+            <RefreshCw className="w-4 h-4" />
+            <span>Refresh All</span>
+          </Button>
+        </div>
       </div>
 
       {/* Mock Mode Warning Banner */}
       {isMockMode && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center space-x-2 text-amber-800">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-3.5 flex items-center space-x-2 text-amber-800 dark:text-amber-300">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-500" />
           <p className="text-sm">
-            <strong>Mock Mode Active:</strong> All MikroTik operations are simulated. No real router changes are applied.
+            <strong>Mock Mode Active:</strong> All MikroTik operations are simulated with live virtual state. No physical hardware connection required.
           </p>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="flex space-x-4 overflow-x-auto">
           {[
             { id: 'info', label: 'Info', icon: Info },
+            { id: 'terminal', label: 'Live CLI Terminal', icon: Terminal },
             { id: 'pppoe', label: 'PPPoE Secrets', icon: Users },
             { id: 'sessions', label: 'Active Sessions', icon: Activity },
             { id: 'profiles', label: 'Profiles', icon: Layers },
@@ -788,10 +948,10 @@ export default function RouterDetailPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 py-3 px-2 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center space-x-2 py-3 px-2 border-b-2 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
                 activeTab === tab.id
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -802,8 +962,9 @@ export default function RouterDetailPage() {
       </div>
 
       {/* Tab content */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 lg:p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 lg:p-6 shadow-sm">
         {activeTab === 'info' && renderInfoTab()}
+        {activeTab === 'terminal' && renderTerminalTab()}
         {activeTab === 'pppoe' && renderPppoeTab()}
         {activeTab === 'sessions' && renderSessionsTab()}
         {activeTab === 'profiles' && renderProfilesTab()}
@@ -823,6 +984,12 @@ export default function RouterDetailPage() {
           onCancel={() => { setIsPppoeFormOpen(false); setEditingPppoe(null); }}
         />
       </Modal>
+
+      {/* Oracle Cloud Setup Modal */}
+      <OracleSetupModal
+        isOpen={isOracleModalOpen}
+        onClose={() => setIsOracleModalOpen(false)}
+      />
     </div>
   );
 }

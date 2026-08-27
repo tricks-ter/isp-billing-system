@@ -44,6 +44,9 @@ export const routerApi = {
     return api.get(`/routers/${id}/queues/paginated${query ? `?${query}` : ''}`);
   },
 
+  // CLI Terminal Command Execution
+  executeCliCommand: (id, command) => api.post(`/routers/${id}/cli`, { command }),
+
   // Legacy (non-paginated) – kept for backward compatibility
   getPppoeSecrets: (id) => api.get(`/routers/${id}/pppoe-secrets`),
   getActiveSessions: (id) => api.get(`/routers/${id}/active-sessions`),

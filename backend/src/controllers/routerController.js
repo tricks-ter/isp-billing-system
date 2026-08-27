@@ -246,6 +246,19 @@ class RouterController {
       return res.status(400).json({ success: false, message: error.message });
     }
   }
+
+  async executeCliCommand(req, res) {
+    try {
+      const { command } = req.body;
+      if (!command) {
+        return res.status(400).json({ success: false, message: 'Command is required' });
+      }
+      const result = await routerService.executeCliCommand(req.params.id, command);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  }
 }
 
 module.exports = new RouterController();

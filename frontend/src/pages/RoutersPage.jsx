@@ -7,17 +7,19 @@ import { settingsApi } from '../services/settingsApi';
 import {
   Plus, Edit, Trash2, TestTube, Server, Users,
   CheckCircle, XCircle, Loader2, ToggleLeft, ToggleRight,
-  AlertTriangle, Eye, RefreshCw
+  AlertTriangle, Eye, RefreshCw, Cloud
 } from 'lucide-react';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
 import RouterForm from '../components/RouterForm';
+import OracleSetupModal from '../components/OracleSetupModal';
 import toast from 'react-hot-toast';
 
 export default function RoutersPage() {
   const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isOracleModalOpen, setIsOracleModalOpen] = useState(false);
   const [editingRouter, setEditingRouter] = useState(null);
   const [testingId, setTestingId] = useState(null);
   const queryClient = useQueryClient();
@@ -110,6 +112,14 @@ export default function RoutersPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage MikroTik RouterOS gateways and PPPoE sessions</p>
         </div>
         <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsOracleModalOpen(true)}
+            className="cursor-pointer border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+          >
+            <Cloud className="w-4 h-4 text-amber-500" />
+            <span>Oracle Cloud Setup Guide</span>
+          </Button>
           <Button variant="outline" onClick={handleRefresh} className="cursor-pointer">
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -268,6 +278,12 @@ export default function RoutersPage() {
           }}
         />
       </Modal>
+
+      {/* Oracle Cloud Setup Modal */}
+      <OracleSetupModal
+        isOpen={isOracleModalOpen}
+        onClose={() => setIsOracleModalOpen(false)}
+      />
     </div>
   );
 }

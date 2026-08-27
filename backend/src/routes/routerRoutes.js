@@ -41,4 +41,7 @@ router.get('/:id/profiles/paginated', routerController.getProfilesPaginated);
 router.get('/:id/queues', routerController.getSimpleQueues); // legacy
 router.get('/:id/queues/paginated', routerController.getSimpleQueuesPaginated);
 
+// --- CLI Terminal ---
+router.post('/:id/cli', roleMiddleware('ADMIN', 'MANAGER'), routerController.executeCliCommand);
+
 module.exports = router;
