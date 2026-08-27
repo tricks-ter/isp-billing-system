@@ -197,7 +197,7 @@ export default function RoutersPage() {
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{router.name}</h3>
-                        <p className="text-xs font-mono text-slate-500">{router.host}:{router.port}</p>
+                        <p className="text-xs font-mono text-slate-500">{router.ipAddress || router.host}:{router.apiPort || router.port || 8728}</p>
                       </div>
                     </div>
                     <Badge variant={router.isActive ? 'success' : 'default'}>

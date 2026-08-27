@@ -34,15 +34,16 @@ class MikroTikService {
     }
   }
 
-  // NEW: Get or create connection from pool
+  // Get or create connection from pool
   async getConnection(router) {
-    const poolKey = `${router.ipAddress}:${router.apiPort}`;
+    const port = parseInt(router.apiPort) || 8728;
+    const poolKey = `${router.ipAddress}:${port}`;
     
     // Check if we have a valid connection in pool
     if (this.connectionPool.has(poolKey)) {
       const conn = this.connectionPool.get(poolKey);
-      if (conn.isConnected) {
-        return conn;
+      if (conn.isConnected && conn.api) {
+        return conn.api;
       }
       // Connection is stale, remove it
       this.connectionPool.delete(poolKey);
@@ -54,8 +55,8 @@ class MikroTikService {
         host: router.ipAddress,
         user: router.username,
         password: router.password,
-        port: router.apiPort || 8728,
-        timeout: this.connectionTimeout,
+        port: port,
+        timeout: 5, // 5 seconds timeout
       });
       
       await api.connect();
@@ -69,7 +70,12 @@ class MikroTikService {
       
       return api;
     } catch (error) {
-      throw new Error(`Connection failed: ${error.message}`);
+      let extra = '';
+      const ip = router.ipAddress || '';
+      if (ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('172.16.') || ip.startsWith('172.17.') || ip.startsWith('172.18.') || ip.startsWith('172.19.') || ip.startsWith('172.2') || ip.startsWith('172.30.') || ip.startsWith('172.31.')) {
+        extra = ` Note: ${ip} is a private local IP. Remote/cloud backends cannot route directly to local subnets without a Public IP, Port Forwarding (NAT), DDNS, or VPN.`;
+      }
+      throw new Error(`Cannot reach RouterOS at ${router.ipAddress}:${port} (${error.message || error}).${extra}`);
     }
   }
 

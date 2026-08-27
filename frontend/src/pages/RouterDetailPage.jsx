@@ -89,10 +89,17 @@ export default function RouterDetailPage() {
   });
 
   // Fetch router info
-  const { data: info, isLoading: infoLoading, refetch: refetchInfo } = useQuery({
+  const {
+    data: info,
+    isLoading: infoLoading,
+    isError: infoError,
+    error: infoErr,
+    refetch: refetchInfo
+  } = useQuery({
     queryKey: ['routerInfo', id],
     queryFn: () => routerApi.getRouterInfo(id).then(res => res.data.data),
     enabled: activeTab === 'info',
+    retry: 1,
   });
 
   // Get mock mode status to show warning
@@ -305,8 +312,37 @@ export default function RouterDetailPage() {
 
   // --- Tab renderers ---
   const renderInfoTab = () => {
-    if (infoLoading) return <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
-    if (!info) return <div className="py-8 text-center text-slate-500">No info available</div>;
+    if (infoLoading) {
+      return (
+        <div className="py-12 text-center text-slate-400">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+          <p className="text-xs font-mono">Connecting to RouterOS API ({router.ipAddress}:{router.apiPort})...</p>
+        </div>
+      );
+    }
+    
+    if (infoError || !info) {
+      const errMsg = infoErr?.response?.data?.message || infoErr?.message || 'Connection failed or timed out';
+      return (
+        <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-2xl p-6 text-center space-y-3">
+          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Unable to Connect to MikroTik RouterOS</h3>
+          <p className="text-xs text-rose-600 dark:text-rose-400 font-mono max-w-xl mx-auto leading-relaxed">
+            {errMsg}
+          </p>
+          <div className="pt-2 flex items-center justify-center space-x-3">
+            <Button variant="outline" onClick={() => refetchInfo()} className="cursor-pointer">
+              <RefreshCw className="w-3.5 h-3.5 mr-1" />
+              <span>Retry Connection</span>
+            </Button>
+            <Button variant="outline" onClick={() => setIsOracleModalOpen(true)} className="cursor-pointer border-amber-300 text-amber-700 dark:text-amber-300">
+              <Cloud className="w-3.5 h-3.5 mr-1 text-amber-500" />
+              <span>Cloud / Public IP Guide</span>
+            </Button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
