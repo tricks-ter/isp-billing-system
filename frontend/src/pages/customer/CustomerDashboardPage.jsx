@@ -10,11 +10,16 @@ import {
   CheckCircle2, ArrowUpRight, Clock, ArrowRight, Smartphone,
   Radio, LifeBuoy, FileText, Download, Loader2, Sparkles, Plus, Calendar, ToggleLeft, ToggleRight
 } from 'lucide-react';
+import Modal from '../../components/Modal';
+import Button from '../../components/Button';
 import toast from 'react-hot-toast';
 
 export default function CustomerDashboardPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [dateFormatMode, setDateFormatMode] = useState('month'); // 'month' or 'exact'
+  const [customPayModalOpen, setCustomPayModalOpen] = useState(false);
+  const [customAmount, setCustomAmount] = useState('');
+  const [customMonths, setCustomMonths] = useState(1);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['customerDashboard'],
@@ -31,6 +36,27 @@ export default function CustomerDashboardPage() {
         window.location.href = res.data.data.bkashURL;
       } else {
         toast.error('Failed to obtain bKash checkout link. Please try again.');
+        setIsPaying(false);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Payment initiation failed');
+      setIsPaying(false);
+    }
+  };
+
+  const handleCustomPay = async () => {
+    setIsPaying(true);
+    try {
+      const payload = {
+        isAdvance: true,
+        monthsCount: customMonths,
+        customAmount: customAmount ? parseFloat(customAmount) : undefined,
+      };
+      const res = await customerPortalApi.payBkash(payload);
+      if (res.data?.data?.bkashURL) {
+        window.location.href = res.data.data.bkashURL;
+      } else {
+        toast.error('Failed to obtain bKash checkout link');
         setIsPaying(false);
       }
     } catch (err) {
@@ -130,7 +156,7 @@ export default function CustomerDashboardPage() {
             </p>
           </div>
 
-          {/* Action Button: Pay Current Month Bill */}
+          {/* Action Button: Pay Bill (Current Due, Advance, or Custom Test Amount) */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {hasDue ? (
               <button
@@ -152,11 +178,41 @@ export default function CustomerDashboardPage() {
                 )}
               </button>
             ) : (
-              <div className="px-6 py-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-bold text-sm flex items-center space-x-2">
-                <CheckCircle2 className="w-5 h-5" />
-                <span>{currentMonthName} Bill Settled</span>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="px-5 py-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 font-bold text-xs sm:text-sm flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{currentMonthName} Bill Settled</span>
+                </div>
+
+                <button
+                  onClick={() => handlePayBkash()}
+                  disabled={isPaying}
+                  className="inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 bg-gradient-to-r from-[#E2136E] to-pink-600 hover:from-pink-600 hover:to-[#E2136E] text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-xl shadow-pink-600/30 transition-all duration-200 disabled:opacity-70 cursor-pointer"
+                >
+                  {isPaying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Connecting to bKash...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="w-4 h-4" />
+                      <span>Pay Next Month (৳{pkgPrice})</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
               </div>
             )}
+
+            <button
+              onClick={() => setCustomPayModalOpen(true)}
+              className="px-4 py-3.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs rounded-2xl transition cursor-pointer flex items-center justify-center space-x-1.5"
+              title="Test custom amount with bKash sandbox"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Custom Test Pay</span>
+            </button>
           </div>
         </div>
 
@@ -393,6 +449,79 @@ export default function CustomerDashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* Custom & Advance Payment Modal */}
+      <Modal
+        isOpen={customPayModalOpen}
+        onClose={() => setCustomPayModalOpen(false)}
+        title="Pay Bill / Advance Recharge with bKash"
+      >
+        <div className="space-y-5 text-sm text-slate-800 dark:text-slate-200">
+          <div className="bg-pink-50 dark:bg-pink-950/40 p-4 rounded-2xl border border-pink-200 dark:border-pink-800/60">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-xs text-pink-700 dark:text-pink-300">Package Monthly Rate</span>
+              <span className="font-black text-pink-600 dark:text-pink-400 text-base">৳{pkgPrice} / mo</span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              You can pay for 1 or more upcoming months, or enter a custom amount to test the bKash payment gateway.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+              Months to Recharge
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    setCustomMonths(m);
+                    setCustomAmount(String(pkgPrice * m));
+                  }}
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                    customMonths === m && (!customAmount || customAmount === String(pkgPrice * m))
+                      ? 'bg-[#E2136E] text-white border-[#E2136E] shadow-md shadow-pink-600/30'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {m} Month{m > 1 ? 's' : ''} (৳{pkgPrice * m})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+              Or Enter Custom Test Amount (৳)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value)}
+              placeholder={`Default: ৳${pkgPrice * customMonths}`}
+              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-pink-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button variant="outline" onClick={() => setCustomPayModalOpen(false)} type="button">
+              Cancel
+            </Button>
+            <button
+              type="button"
+              onClick={handleCustomPay}
+              disabled={isPaying}
+              className="px-6 py-2.5 bg-gradient-to-r from-[#E2136E] to-pink-600 hover:from-pink-600 hover:to-[#E2136E] text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer"
+            >
+              {isPaying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+              <span>Pay ৳{customAmount || (pkgPrice * customMonths)} with bKash</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

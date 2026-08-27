@@ -9,6 +9,8 @@ import {
   FileText, Download, Loader2, ArrowRight, ShieldCheck, Plus, Calendar, X,
   ToggleLeft, ToggleRight
 } from 'lucide-react';
+import Modal from '../../components/Modal';
+import Button from '../../components/Button';
 import toast from 'react-hot-toast';
 
 export default function CustomerInvoicesPage() {
@@ -89,7 +91,15 @@ export default function CustomerInvoicesPage() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-wrap gap-2">
+          <button
+            onClick={() => setAdvanceModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-[#E2136E] to-pink-600 hover:from-pink-600 hover:to-[#E2136E] text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center space-x-2 cursor-pointer"
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>Pay Bill / Advance with bKash</span>
+          </button>
+
           {/* Toggle Button: Month View vs Exact Date */}
           <button
             onClick={() => setDateFormatMode(dateFormatMode === 'month' ? 'exact' : 'month')}
@@ -289,6 +299,75 @@ export default function CustomerInvoicesPage() {
           </div>
         </div>
       )}
+
+      {/* Advance & Custom Bill Payment Modal */}
+      <Modal
+        isOpen={advanceModalOpen}
+        onClose={() => setAdvanceModalOpen(false)}
+        title="Pay Bill / Advance Recharge with bKash"
+      >
+        <div className="space-y-5 text-sm text-slate-800 dark:text-slate-200">
+          <div className="bg-pink-50 dark:bg-pink-950/40 p-4 rounded-2xl border border-pink-200 dark:border-pink-800/60">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Recharge your internet connection by paying for 1 or more upcoming months, or enter a custom amount to test the bKash payment gateway.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+              Months to Recharge
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    setAdvanceMonths(m);
+                    setCustomAdvanceAmount('');
+                  }}
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                    advanceMonths === m && !customAdvanceAmount
+                      ? 'bg-[#E2136E] text-white border-[#E2136E] shadow-md shadow-pink-600/30'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {m} Month{m > 1 ? 's' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+              Or Custom Test Amount (৳)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={customAdvanceAmount}
+              onChange={(e) => setCustomAdvanceAmount(e.target.value)}
+              placeholder="e.g. 500, 1000"
+              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-pink-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button variant="outline" onClick={() => setAdvanceModalOpen(false)} type="button">
+              Cancel
+            </Button>
+            <button
+              type="button"
+              onClick={handleAdvancePay}
+              disabled={isPayingAdvance}
+              className="px-6 py-2.5 bg-gradient-to-r from-[#E2136E] to-pink-600 hover:from-pink-600 hover:to-[#E2136E] text-white font-extrabold text-xs rounded-xl shadow-lg transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer"
+            >
+              {isPayingAdvance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+              <span>Pay with bKash</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

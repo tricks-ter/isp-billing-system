@@ -117,3 +117,4 @@ echo b > /proc/sysrq-trigger`;
     </Modal>
   );
 }
+
